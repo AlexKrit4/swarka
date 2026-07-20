@@ -6,18 +6,18 @@ import { deleteUpload, saveUpload } from "../lib/uploads.js";
 import { z } from "zod";
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  email: z.string().min(1).max(120),
   password: z.string().min(1),
 });
 
 const userCreateSchema = z.object({
-  email: z.string().email(),
+  email: z.string().min(1).max(120),
   password: z.string().min(6),
   name: z.string().optional(),
 });
 
 const userUpdateSchema = z.object({
-  email: z.string().email().optional(),
+  email: z.string().min(1).max(120).optional(),
   password: z.string().min(6).optional(),
   name: z.string().nullable().optional(),
 });

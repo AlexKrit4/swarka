@@ -82,7 +82,8 @@ function AdminsContent() {
         <div>
           <h1 className="text-2xl font-bold">Админы</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Подадмины имеют те же права на контент. Управлять ими можете только вы.
+            Логин может быть любым (не только почта). Подадмины имеют те же права на
+            контент. Управлять ими можете только вы.
           </p>
         </div>
         <button
@@ -99,8 +100,9 @@ function AdminsContent() {
           <h2 className="font-semibold">{editing.id ? "Изменить" : "Новый подадмин"}</h2>
           {error && <p className="text-red-600 text-sm">{error}</p>}
           <input
-            type="email"
-            placeholder="Email"
+            type="text"
+            placeholder="Логин (любой)"
+            autoComplete="off"
             value={editing.email}
             onChange={(e) => setEditing({ ...editing, email: e.target.value })}
           />

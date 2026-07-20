@@ -6,8 +6,8 @@ import { login } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("admin@example.com");
-  const [password, setPassword] = useState("admin123");
+  const [loginName, setLoginName] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -16,10 +16,10 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     try {
-      await login(email, password);
+      await login(loginName.trim(), password);
       router.push("/");
     } catch {
-      setError("Неверный email или пароль");
+      setError("Неверный логин или пароль");
     } finally {
       setLoading(false);
     }
@@ -34,18 +34,21 @@ export default function LoginPage() {
         </div>
         {error && <p className="text-red-600 text-sm text-center">{error}</p>}
         <div>
-          <label className="block text-sm font-medium mb-1">Email</label>
+          <label className="block text-sm font-medium mb-1">Логин</label>
           <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="text"
+            autoComplete="username"
+            value={loginName}
+            onChange={(e) => setLoginName(e.target.value)}
             required
+            placeholder="Логин"
           />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Пароль</label>
           <input
             type="password"
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
