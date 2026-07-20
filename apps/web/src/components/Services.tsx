@@ -61,9 +61,13 @@ export function Services({ services }: ServicesProps) {
                   <p className="text-steel text-sm mb-4 leading-relaxed">
                     {service.description}
                   </p>
-                  {service.priceFrom && (
+                  {service.priceFrom != null ? (
                     <p className="font-display text-xl font-medium text-accent mb-3">
                       от {service.priceFrom.toLocaleString("ru-RU")} ₽
+                    </p>
+                  ) : (
+                    <p className="font-display text-xl font-medium text-accent mb-3">
+                      Договорная
                     </p>
                   )}
                   <a
