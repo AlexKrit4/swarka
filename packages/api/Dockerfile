@@ -1,33 +1,28 @@
 FROM node:20-alpine AS base
-RUN corepack enable && corepack prepare pnpm@9 --activate
 WORKDIR /app
-
-FROM base AS deps
-COPY package.json pnpm-workspace.yaml ./
-COPY packages/database/package.json ./packages/database/
-COPY packages/api/package.json ./packages/api/
-RUN pnpm install --filter @swarka/api --filter @swarka/database
 
 FROM base AS builder
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/packages/database/node_modules ./packages/database/node_modules
-COPY --from=deps /app/packages/api/node_modules ./packages/api/node_modules
-COPY package.json pnpm-workspace.yaml ./
 COPY packages/database ./packages/database
 COPY packages/api ./packages/api
-RUN pnpm --filter @swarka/database generate
-RUN pnpm --filter @swarka/api build
 
-FROM node:20-alpine AS runner
-WORKDIR /app
+WORKDIR /app/packages/database
+RUN npm install && npx prisma generate
+
+WORKDIR /app/packages/api
+RUN npm install && npm run build
+
+FROM base AS runner
 ENV NODE_ENV=production
-COPY --from=builder /app/packages/api/dist ./dist
-COPY --from=builder /app/packages/api/package.json ./
+WORKDIR /app
+
 COPY --from=builder /app/packages/database ./packages/database
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/packages/database/node_modules ./packages/database/node_modules
-COPY --from=builder /app/packages/api/node_modules ./node_modules_api
-RUN mkdir -p /app/uploads \
-  && npm install -g prisma@6.5.0 tsx@4.19.3
+COPY --from=builder /app/packages/api ./packages/api
+
+WORKDIR /app/packages/api
+RUN mkdir -p /app/uploads
+
+ENV UPLOADS_DIR=/app/uploads
 EXPOSE 4000
-CMD ["sh", "-c", "prisma migrate deploy --schema=packages/database/prisma/schema.prisma && tsx packages/database/prisma/seed.ts && node dist/index.js"]
+
+# tsx runs compiled JS + resolves @swarka/database TS entry; prisma CLI from database deps
+CMD ["sh", "-c", "cd /app/packages/database && npx prisma migrate deploy && npx tsx prisma/seed.ts && cd /app/packages/api && npx tsx src/index.ts"]
