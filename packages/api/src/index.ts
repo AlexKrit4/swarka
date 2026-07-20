@@ -20,8 +20,17 @@ async function main() {
   const app = Fastify({ logger: true });
 
   await app.register(cors, {
-    origin: CORS_ORIGINS,
+    origin: (origin, cb) => {
+      if (!origin || CORS_ORIGINS.includes(origin)) {
+        cb(null, true);
+        return;
+      }
+      cb(null, false);
+    },
     credentials: true,
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Accept", "X-Requested-With"],
+    exposedHeaders: ["Content-Type"],
   });
 
   await app.register(cookie);
