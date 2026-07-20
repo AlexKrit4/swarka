@@ -41,7 +41,7 @@ export async function login(email: string, password: string) {
   const result = await apiFetch<{
     success: boolean;
     token: string;
-    user: { id: string; email: string; name: string | null };
+    user: { id: string; email: string; name: string | null; role: string };
   }>("/api/admin/login", {
     method: "POST",
     body: JSON.stringify({ email, password }),
@@ -56,9 +56,46 @@ export async function logout() {
 }
 
 export async function getMe() {
-  return apiFetch<{ user: { id: string; email: string; name: string | null } }>(
-    "/api/admin/me"
-  );
+  return apiFetch<{
+    user: { id: string; email: string; name: string | null; role: string };
+  }>("/api/admin/me");
+}
+
+export interface AdminAccount {
+  id: string;
+  email: string;
+  name: string | null;
+  role: string;
+  createdAt: string;
+}
+
+export async function getAdmins() {
+  return apiFetch<AdminAccount[]>("/api/admin/users");
+}
+
+export async function createAdmin(data: {
+  email: string;
+  password: string;
+  name?: string;
+}) {
+  return apiFetch<AdminAccount>("/api/admin/users", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateAdmin(
+  id: string,
+  data: { email?: string; password?: string; name?: string | null }
+) {
+  return apiFetch<AdminAccount>(`/api/admin/users/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteAdmin(id: string) {
+  return apiFetch(`/api/admin/users/${id}`, { method: "DELETE" });
 }
 
 export async function getDashboard() {

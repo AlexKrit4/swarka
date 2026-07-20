@@ -1,13 +1,25 @@
 import type { FastifyInstance } from "fastify";
 import bcrypt from "bcryptjs";
 import { prisma, LeadStatus } from "@swarka/database";
-import { requireAuth } from "../plugins/auth.js";
+import { requireAuth, requireSuperAdmin } from "../plugins/auth.js";
 import { deleteUpload, saveUpload } from "../lib/uploads.js";
 import { z } from "zod";
 
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
+});
+
+const userCreateSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+  name: z.string().optional(),
+});
+
+const userUpdateSchema = z.object({
+  email: z.string().email().optional(),
+  password: z.string().min(6).optional(),
+  name: z.string().nullable().optional(),
 });
 
 export async function adminRoutes(app: FastifyInstance) {
@@ -25,7 +37,7 @@ export async function adminRoutes(app: FastifyInstance) {
       return reply.status(401).send({ error: "Invalid credentials" });
     }
 
-    const token = app.jwt.sign({ id: user.id, email: user.email });
+    const token = app.jwt.sign({ id: user.id, email: user.email, role: user.role });
 
     reply.setCookie("token", token, {
       httpOnly: true,
@@ -38,7 +50,7 @@ export async function adminRoutes(app: FastifyInstance) {
     return {
       success: true,
       token,
-      user: { id: user.id, email: user.email, name: user.name },
+      user: { id: user.id, email: user.email, name: user.name, role: user.role },
     };
   });
 
@@ -50,7 +62,87 @@ export async function adminRoutes(app: FastifyInstance) {
   app.get("/api/admin/me", { preHandler: requireAuth }, async (request) => {
     const payload = request.user as { id: string; email: string };
     const user = await prisma.user.findUnique({ where: { id: payload.id } });
-    return { user: { id: user?.id, email: user?.email, name: user?.name } };
+    return {
+      user: {
+        id: user?.id,
+        email: user?.email,
+        name: user?.name,
+        role: user?.role ?? "ADMIN",
+      },
+    };
+  });
+
+  // Sub-admins — only SUPER_ADMIN
+  app.get("/api/admin/users", { preHandler: requireSuperAdmin }, async () => {
+    return prisma.user.findMany({
+      orderBy: { createdAt: "asc" },
+      select: { id: true, email: true, name: true, role: true, createdAt: true },
+    });
+  });
+
+  app.post("/api/admin/users", { preHandler: requireSuperAdmin }, async (request, reply) => {
+    const parsed = userCreateSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: "Invalid data" });
+    }
+
+    const exists = await prisma.user.findUnique({ where: { email: parsed.data.email } });
+    if (exists) {
+      return reply.status(400).send({ error: "Email already exists" });
+    }
+
+    const password = await bcrypt.hash(parsed.data.password, 10);
+    const user = await prisma.user.create({
+      data: {
+        email: parsed.data.email,
+        password,
+        name: parsed.data.name || "Администратор",
+        role: "ADMIN",
+      },
+      select: { id: true, email: true, name: true, role: true, createdAt: true },
+    });
+    return user;
+  });
+
+  app.put("/api/admin/users/:id", { preHandler: requireSuperAdmin }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const parsed = userUpdateSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: "Invalid data" });
+    }
+
+    const target = await prisma.user.findUnique({ where: { id } });
+    if (!target) {
+      return reply.status(404).send({ error: "Not found" });
+    }
+    if (target.role === "SUPER_ADMIN") {
+      return reply.status(403).send({ error: "Cannot edit main admin" });
+    }
+
+    const data: { email?: string; name?: string | null; password?: string } = {};
+    if (parsed.data.email) data.email = parsed.data.email;
+    if (parsed.data.name !== undefined) data.name = parsed.data.name;
+    if (parsed.data.password) data.password = await bcrypt.hash(parsed.data.password, 10);
+
+    return prisma.user.update({
+      where: { id },
+      data,
+      select: { id: true, email: true, name: true, role: true, createdAt: true },
+    });
+  });
+
+  app.delete("/api/admin/users/:id", { preHandler: requireSuperAdmin }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const me = request.user as { id: string };
+    const target = await prisma.user.findUnique({ where: { id } });
+    if (!target) {
+      return reply.status(404).send({ error: "Not found" });
+    }
+    if (target.role === "SUPER_ADMIN" || target.id === me.id) {
+      return reply.status(403).send({ error: "Cannot delete main admin" });
+    }
+    await prisma.user.delete({ where: { id } });
+    return { success: true };
   });
 
   app.get("/api/admin/dashboard", { preHandler: requireAuth }, async () => {

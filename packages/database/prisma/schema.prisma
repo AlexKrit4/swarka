@@ -12,6 +12,7 @@ model User {
   email     String   @unique
   password  String
   name      String?
+  role      String   @default("ADMIN") // SUPER_ADMIN | ADMIN
   createdAt DateTime @default(now())
 }
 
