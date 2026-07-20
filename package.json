@@ -1,0 +1,21 @@
+{
+  "name": "swarka",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n api,web,admin -c blue,green,yellow \"pnpm --filter @swarka/api dev\" \"pnpm --filter @swarka/web dev\" \"pnpm --filter @swarka/admin dev\"",
+    "dev:api": "pnpm --filter @swarka/api dev",
+    "dev:web": "pnpm --filter @swarka/web dev",
+    "dev:admin": "pnpm --filter @swarka/admin dev",
+    "build": "pnpm --filter @swarka/database generate && pnpm -r build",
+    "db:generate": "pnpm --filter @swarka/database generate",
+    "db:migrate": "pnpm --filter @swarka/database migrate",
+    "db:seed": "pnpm --filter @swarka/database seed",
+    "db:push": "pnpm --filter @swarka/database push"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

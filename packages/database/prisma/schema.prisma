@@ -1,0 +1,101 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+}
+
+model SiteSettings {
+  id              String   @id @default("singleton")
+  companyName     String   @default("Swarka")
+  phone           String   @default("+7 (495) 000-00-00")
+  whatsapp        String?
+  telegram        String?
+  email           String?
+  logoText        String?
+  logoUrl         String?
+  heroTitle       String   @default("Изготовление и установка навесов в Москве и МО")
+  heroSubtitle    String?
+  heroImageUrl    String?
+  promoTitle      String?
+  promoSubtitle   String?
+  promoBadge      String?
+  promoEnabled    Boolean  @default(true)
+  seoTitle        String?
+  seoDescription  String?
+  yandexMetrikaId String?
+  whyUsJson       String?
+  address         String?
+  workZone        String   @default("Москва и Московская область")
+  updatedAt       DateTime @updatedAt
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  priceFrom   Int?
+  imageUrl    String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PortfolioItem {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  imageUrl    String
+  tag         String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model FaqItem {
+  id        String  @id @default(cuid())
+  question  String
+  answer    String
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+}
+
+model Review {
+  id         String  @id @default(cuid())
+  authorName String
+  text       String
+  rating     Int     @default(5)
+  sortOrder  Int     @default(0)
+  isActive   Boolean @default(true)
+}
+
+model Lead {
+  id          String     @id @default(cuid())
+  name        String
+  phone       String
+  serviceType String?
+  comment     String?
+  source      String?
+  status      LeadStatus @default(NEW)
+  note        String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+enum LeadStatus {
+  NEW
+  IN_PROGRESS
+  CLOSED
+}

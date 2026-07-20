@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f9fafb;
+  --foreground: #171717;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+input,
+textarea,
+select {
+  @apply border border-gray-200 rounded-lg px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-[#F7E018];
+}
+
+button[type="submit"],
+.btn-primary {
+  @apply bg-[#F7E018] text-black font-semibold px-4 py-2 rounded-lg hover:bg-[#e6d010] transition-colors disabled:opacity-50;
+}
+
+.btn-danger {
+  @apply bg-red-100 text-red-700 font-medium px-3 py-1.5 rounded-lg hover:bg-red-200 text-sm;
+}
+
+.card {
+  @apply bg-white rounded-xl border border-gray-100 p-5 shadow-sm;
+}

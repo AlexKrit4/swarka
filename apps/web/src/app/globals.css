@@ -1,0 +1,164 @@
+@import "tailwindcss";
+@import "lenis/dist/lenis.css";
+
+:root {
+  --background: #f3efe6;
+  --foreground: #1a1714;
+  --ink: #1a1714;
+  --steel: #5c564e;
+  --paper: #f3efe6;
+  --paper-deep: #e8e0d2;
+  --accent: #c45c26;
+  --accent-hover: #a34a1c;
+  --accent-soft: #f0dcc8;
+  --primary: #1f2a24;
+  --primary-soft: #2a3a31;
+  --copper: #c45c26;
+  --weld: #e8a54b;
+  --line: rgba(26, 23, 20, 0.12);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-ink: var(--ink);
+  --color-steel: var(--steel);
+  --color-paper: var(--paper);
+  --color-paper-deep: var(--paper-deep);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-primary: var(--primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-copper: var(--copper);
+  --color-weld: var(--weld);
+  --color-line: var(--line);
+  --font-sans: var(--font-manrope);
+  --font-display: var(--font-unbounded);
+}
+
+html {
+  scroll-behavior: auto;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-manrope), system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--ink);
+}
+
+.font-display {
+  font-family: var(--font-unbounded), system-ui, sans-serif;
+}
+
+.section-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.metal-grid {
+  background-image:
+    linear-gradient(rgba(26, 23, 20, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(26, 23, 20, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+.metal-noise {
+  position: relative;
+}
+
+.metal-noise::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  z-index: 1;
+}
+
+.btn-accent {
+  @apply inline-flex items-center justify-center gap-2 bg-accent text-white font-semibold transition-colors hover:bg-accent-hover;
+  border-radius: 2px;
+  box-shadow: 0 10px 30px -12px rgba(196, 92, 38, 0.55);
+}
+
+.btn-outline {
+  @apply inline-flex items-center justify-center gap-2 border border-white/25 text-white font-semibold transition-colors hover:bg-white/10 hover:border-white/50;
+  border-radius: 2px;
+}
+
+.btn-ink {
+  @apply inline-flex items-center justify-center gap-2 bg-ink text-paper font-semibold transition-colors hover:bg-primary;
+  border-radius: 2px;
+}
+
+.input-field {
+  @apply w-full border px-4 py-3.5 focus:outline-none bg-white/80 backdrop-blur-sm;
+  border-color: var(--line);
+  border-radius: 2px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input-field:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.surface-card {
+  background: color-mix(in srgb, white 72%, var(--paper));
+  border: 1px solid var(--line);
+  border-radius: 2px;
+}
+
+.spark-line {
+  height: 2px;
+  width: 48px;
+  background: linear-gradient(90deg, var(--accent), var(--weld));
+}
+
+@keyframes spark-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+.spark-dot {
+  animation: spark-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee 28s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track,
+  .spark-dot {
+    animation: none;
+  }
+}
