@@ -7,14 +7,18 @@ async function apiFetch<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const token = getToken();
+  const headers: Record<string, string> = {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options.headers as Record<string, string> | undefined),
+  };
+  if (options.body !== undefined) {
+    headers["Content-Type"] = headers["Content-Type"] ?? "application/json";
+  }
+
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
+    headers,
   });
 
   if (res.status === 401) {
