@@ -38,6 +38,10 @@ nano .env
 - `ADMIN_EMAIL` / `ADMIN_PASSWORD`
 - `POSTGRES_PASSWORD` (и в `DATABASE_URL` тот же пароль)
 
+**Важно:** пока нет SSL, в `.env` должны быть `http://` (не `https://`) для
+`NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_URL` и `CORS_ORIGINS`.
+После SSL — переключите на `https://` и пересоберите: `docker compose up -d --build`.
+
 Готовый шаблон уже с доменом `swarka-i-voditel.ru`.
 
 ## 4. Первый запуск (HTTP)

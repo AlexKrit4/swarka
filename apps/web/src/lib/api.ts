@@ -1,9 +1,23 @@
 import type { FaqItem, PortfolioItem, Service, SiteData } from "./types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+/** Browser / public URL (baked at build). */
+const PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+
+/** Server-side fetch inside Docker should use internal network. */
+function getServerApiUrl() {
+  return process.env.INTERNAL_API_URL ?? PUBLIC_API_URL;
+}
+
+function getClientApiUrl() {
+  return PUBLIC_API_URL;
+}
+
+function apiBase() {
+  return typeof window === "undefined" ? getServerApiUrl() : getClientApiUrl();
+}
 
 async function fetchApi<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(`${apiBase()}${path}`, {
     next: { revalidate: 60 },
   });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
@@ -11,14 +25,15 @@ async function fetchApi<T>(path: string): Promise<T> {
 }
 
 export function getApiUrl(path: string) {
-  return `${API_URL}${path}`;
+  return `${apiBase()}${path}`;
 }
 
 export function resolveImageUrl(url: string | null | undefined) {
   if (!url) return null;
   if (url.startsWith("http")) return url;
+  if (url.startsWith("/uploads/")) return `${PUBLIC_API_URL}${url}`;
   if (url.startsWith("/")) return url;
-  return `${API_URL}${url}`;
+  return `${PUBLIC_API_URL}${url}`;
 }
 
 export async function getSiteData(): Promise<SiteData> {
@@ -44,7 +59,7 @@ export async function submitLead(data: {
   comment?: string;
   source?: string;
 }) {
-  const res = await fetch(`${API_URL}/api/leads`, {
+  const res = await fetch(`${getClientApiUrl()}/api/leads`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
