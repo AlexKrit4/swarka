@@ -16,4 +16,11 @@
     <string name="delete_digit">Удалить</string>
     <string name="biometric_title">SWARKA Admin</string>
     <string name="biometric_subtitle">Подтвердите отпечаток пальца</string>
+    <string name="account_picker_title">Войти как</string>
+    <string name="account_picker_subtitle">Выберите аккаунт подадмина</string>
+    <string name="account_picker_empty">Подадмины не найдены</string>
+    <string name="account_picker_error">Не удалось загрузить список аккаунтов</string>
+    <string name="password_hint">Пароль</string>
+    <string name="enter_password_for_account">Введите пароль для выбранного аккаунта</string>
+    <string name="login_button">Войти</string>
 </resources>

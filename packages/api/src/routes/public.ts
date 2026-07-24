@@ -14,6 +14,14 @@ const leadSchema = z.object({
 export async function publicRoutes(app: FastifyInstance) {
   app.get("/api/health", async () => ({ status: "ok" }));
 
+  app.get("/api/mobile/accounts", async () => {
+    return prisma.user.findMany({
+      where: { role: "ADMIN" },
+      select: { id: true, email: true, name: true },
+      orderBy: { createdAt: "asc" },
+    });
+  });
+
   app.get("/api/settings", async () => {
     const settings = await prisma.siteSettings.findUnique({
       where: { id: "singleton" },

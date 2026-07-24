@@ -58,14 +58,15 @@ class AdminWebActivity : AppCompatActivity() {
         }
 
         lifecycleScope.launch {
-            val result = sessionManager.ensureLoggedIn()
-            result.onSuccess {
-                tokenInjected = false
-                webView.loadUrl(BuildConfig.ADMIN_URL)
-            }.onFailure {
+            val token = sessionManager.getToken()
+            if (token.isNullOrBlank()) {
                 progressBar.visibility = View.GONE
                 errorText.visibility = View.VISIBLE
+                errorText.text = getString(R.string.login_failed)
+                return@launch
             }
+            tokenInjected = false
+            webView.loadUrl(BuildConfig.ADMIN_URL)
         }
     }
 

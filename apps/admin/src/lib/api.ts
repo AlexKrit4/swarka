@@ -303,6 +303,49 @@ export async function deleteLead(id: string) {
   return apiFetch(`/api/admin/leads/${id}`, { method: "DELETE" });
 }
 
+export interface ChangeLogItem {
+  id: string;
+  userId: string | null;
+  userEmail: string | null;
+  entityType: string;
+  entityId: string | null;
+  action: string;
+  label: string;
+  beforeJson: string | null;
+  afterJson: string | null;
+  createdAt: string;
+}
+
+export interface SiteSnapshotItem {
+  id: string;
+  label: string | null;
+  userEmail: string | null;
+  createdAt: string;
+}
+
+export async function getChangelog() {
+  return apiFetch<ChangeLogItem[]>("/api/admin/changelog");
+}
+
+export async function getSnapshots() {
+  return apiFetch<SiteSnapshotItem[]>("/api/admin/snapshots");
+}
+
+export async function createSnapshot(label?: string) {
+  return apiFetch("/api/admin/snapshots", {
+    method: "POST",
+    body: JSON.stringify({ label }),
+  });
+}
+
+export async function restoreChangelog(id: string) {
+  return apiFetch(`/api/admin/changelog/${id}/restore`, { method: "POST" });
+}
+
+export async function restoreSnapshot(id: string) {
+  return apiFetch(`/api/admin/snapshots/${id}/restore`, { method: "POST" });
+}
+
 export async function uploadFile(file: File): Promise<{ url: string }> {
   const formData = new FormData();
   formData.append("file", file);

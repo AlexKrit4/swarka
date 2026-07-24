@@ -67,7 +67,6 @@ function AdminsContent() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Удалить подадмина?")) return;
     try {
       await deleteAdmin(id);
       load();

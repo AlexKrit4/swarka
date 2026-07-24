@@ -11,6 +11,7 @@ const NAV = [
   { href: "/portfolio", label: "Наши работы" },
   { href: "/content", label: "Контент сайта" },
   { href: "/why-us", label: "Преимущества" },
+  { href: "/versions", label: "Версии и логи" },
   { href: "/settings", label: "Настройки" },
   { href: "/faq", label: "FAQ" },
   { href: "/reviews", label: "Отзывы" },

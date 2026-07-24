@@ -62,7 +62,6 @@ function ServicesContent() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Удалить услугу?")) return;
     await deleteService(id);
     load();
   };

@@ -102,3 +102,25 @@ enum LeadStatus {
   IN_PROGRESS
   CLOSED
 }
+
+model ChangeLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  userEmail  String?
+  entityType String
+  entityId   String?
+  action     String
+  label      String
+  beforeJson String?  @db.Text
+  afterJson  String?  @db.Text
+  createdAt  DateTime @default(now())
+}
+
+model SiteSnapshot {
+  id           String   @id @default(cuid())
+  label        String?
+  userId       String?
+  userEmail    String?
+  snapshotJson String   @db.Text
+  createdAt    DateTime @default(now())
+}

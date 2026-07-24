@@ -11,13 +11,11 @@ android {
         applicationId = "ru.swarka.admin"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = 3
+        versionName = "1.1.0"
 
         buildConfigField("String", "ADMIN_URL", "\"https://admin.swarka-i-voditel.ru\"")
         buildConfigField("String", "API_URL", "\"https://api.swarka-i-voditel.ru\"")
-        buildConfigField("String", "ADMIN_LOGIN", "\"89647779568\"")
-        buildConfigField("String", "ADMIN_PASSWORD", "\"Lungu1985!\"")
     }
 
     signingConfigs {
@@ -63,6 +61,7 @@ dependencies {
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
     implementation("androidx.activity:activity-ktx:1.9.3")
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 }
