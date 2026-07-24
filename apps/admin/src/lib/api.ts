@@ -177,6 +177,8 @@ export interface SiteSettings {
   seoDescription: string | null;
   yandexMetrikaId: string | null;
   whyUsJson: string | null;
+  contentJson: string | null;
+  privacyContent: string | null;
   address: string | null;
   workZone: string;
 }

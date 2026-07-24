@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
-import type { SiteSettings } from "@/lib/types";
+import type { SiteContent, SiteSettings } from "@/lib/types";
 import { resolveImageUrl } from "@/lib/api";
 import { ArrowIcon } from "./ArrowIcon";
 import { SmartImage } from "./SmartImage";
@@ -11,13 +11,13 @@ import { MagneticButton } from "./MagneticButton";
 const FALLBACK_HERO =
   "https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/Carport_with_storage.jpg/1280px-Carport_with_storage.jpg";
 
-const FEATURES = ["Бесплатный замер", "Свой цех", "Гарантия 3 года", "Монтаж под ключ"];
-
 interface HeroProps {
   settings: SiteSettings;
+  content: SiteContent;
 }
 
-export function Hero({ settings }: HeroProps) {
+export function Hero({ settings, content }: HeroProps) {
+  const hero = content.hero;
   const resolved = resolveImageUrl(settings.heroImageUrl);
   const rootRef = useRef<HTMLElement>(null);
   const imageRef = useRef<HTMLDivElement>(null);
@@ -81,7 +81,9 @@ export function Hero({ settings }: HeroProps) {
         <div className="max-w-4xl">
           <div data-hero-brand className="opacity-0 flex items-center gap-3 mb-6">
             <span className="spark-line" />
-            <span className="section-eyebrow text-weld">Москва и Московская область</span>
+            <span className="section-eyebrow text-weld">
+              {hero.eyebrow || settings.workZone}
+            </span>
           </div>
 
           <p
@@ -111,7 +113,7 @@ export function Hero({ settings }: HeroProps) {
         <div className="mt-10 flex flex-col sm:flex-row flex-wrap gap-3">
           <div data-hero-cta className="opacity-0">
             <MagneticButton href="#contact" className="btn-accent px-7 py-4 text-base">
-              Рассчитать стоимость
+              {hero.ctaPrimary}
               <ArrowIcon />
             </MagneticButton>
           </div>
@@ -120,7 +122,7 @@ export function Hero({ settings }: HeroProps) {
             data-hero-cta
             className="btn-outline opacity-0 px-7 py-4 text-base"
           >
-            Смотреть работы
+            {hero.ctaSecondary}
             <ArrowIcon />
           </a>
           <a
@@ -134,18 +136,20 @@ export function Hero({ settings }: HeroProps) {
           </a>
         </div>
 
-        <ul className="mt-10 grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {FEATURES.map((item) => (
-            <li
-              key={item}
-              data-hero-feature
-              className="opacity-0 flex items-center gap-3 border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/70"
-            >
-              <span className="w-1.5 h-1.5 bg-accent shrink-0" />
-              {item}
-            </li>
-          ))}
-        </ul>
+        {hero.features.length > 0 && (
+          <ul className="mt-10 grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {hero.features.map((item) => (
+              <li
+                key={item}
+                data-hero-feature
+                className="opacity-0 flex items-center gap-3 border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/70"
+              >
+                <span className="w-1.5 h-1.5 bg-accent shrink-0" />
+                {item}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <div className="relative z-[2] max-w-7xl mx-auto px-4 lg:px-8 pb-12 lg:pb-16">
@@ -156,16 +160,17 @@ export function Hero({ settings }: HeroProps) {
           <SmartImage
             src={resolved}
             fallback={FALLBACK_HERO}
-            alt="Пример металлического навеса"
+            alt={hero.imageAlt}
             className="absolute inset-0 w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-primary/50 via-transparent to-transparent pointer-events-none" />
-          <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-white/70 font-semibold">
-              Металлоконструкции · под ключ
-            </p>
-            <span className="hidden sm:inline text-xs text-white/40">01 / hero</span>
-          </div>
+          {hero.imageCaption && (
+            <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-white/70 font-semibold">
+                {hero.imageCaption}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -190,7 +195,7 @@ export function Hero({ settings }: HeroProps) {
               </div>
             </div>
             <MagneticButton href="#contact" className="btn-accent px-5 py-2.5 text-sm shrink-0 w-fit">
-              Узнать подробнее
+              {hero.promoCta}
               <ArrowIcon className="w-4 h-4" />
             </MagneticButton>
           </div>

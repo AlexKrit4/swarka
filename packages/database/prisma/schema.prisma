@@ -36,6 +36,8 @@ model SiteSettings {
   seoDescription  String?
   yandexMetrikaId String?
   whyUsJson       String?
+  contentJson     String?
+  privacyContent  String?  @db.Text
   address         String?
   workZone        String   @default("Москва и Московская область")
   updatedAt       DateTime @updatedAt

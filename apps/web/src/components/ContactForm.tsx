@@ -2,15 +2,17 @@
 
 import { useState } from "react";
 import type { Service } from "@/lib/types";
+import type { SiteContent } from "@swarka/shared";
 import { submitLead } from "@/lib/api";
 import { MagneticButton } from "./MagneticButton";
 
 interface ContactFormProps {
   services: Service[];
+  content: SiteContent["form"];
   defaultService?: string;
 }
 
-export function ContactForm({ services, defaultService }: ContactFormProps) {
+export function ContactForm({ services, content, defaultService }: ContactFormProps) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [serviceType, setServiceType] = useState(defaultService ?? "");
@@ -61,8 +63,8 @@ export function ContactForm({ services, defaultService }: ContactFormProps) {
   if (status === "success") {
     return (
       <div className="border border-accent/20 bg-accent-soft p-8 text-center">
-        <p className="font-display text-2xl font-semibold text-ink mb-2">Заявка отправлена!</p>
-        <p className="text-steel">Перезвоним в течение 15 минут в рабочее время.</p>
+        <p className="font-display text-2xl font-semibold text-ink mb-2">{content.successTitle}</p>
+        <p className="text-steel">{content.successMessage}</p>
       </div>
     );
   }
@@ -71,7 +73,7 @@ export function ContactForm({ services, defaultService }: ContactFormProps) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label className="block text-xs font-bold uppercase tracking-[0.14em] text-steel mb-2">
-          Ваше имя
+          {content.nameLabel}
         </label>
         <input
           type="text"
@@ -79,12 +81,12 @@ export function ContactForm({ services, defaultService }: ContactFormProps) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           className="input-field"
-          placeholder="Иван"
+          placeholder={content.namePlaceholder}
         />
       </div>
       <div>
         <label className="block text-xs font-bold uppercase tracking-[0.14em] text-steel mb-2">
-          Телефон
+          {content.phoneLabel}
         </label>
         <input
           type="tel"
@@ -92,19 +94,19 @@ export function ContactForm({ services, defaultService }: ContactFormProps) {
           value={phone}
           onChange={(e) => setPhone(formatPhone(e.target.value))}
           className="input-field"
-          placeholder="+7 (___) ___-__-__"
+          placeholder={content.phonePlaceholder}
         />
       </div>
       <div>
         <label className="block text-xs font-bold uppercase tracking-[0.14em] text-steel mb-2">
-          Тип работ
+          {content.serviceLabel}
         </label>
         <select
           value={serviceType}
           onChange={(e) => setServiceType(e.target.value)}
           className="input-field bg-white"
         >
-          <option value="">Выберите услугу</option>
+          <option value="">{content.servicePlaceholder}</option>
           {services.map((s) => (
             <option key={s.id} value={s.title}>
               {s.title}
@@ -114,14 +116,14 @@ export function ContactForm({ services, defaultService }: ContactFormProps) {
       </div>
       <div>
         <label className="block text-xs font-bold uppercase tracking-[0.14em] text-steel mb-2">
-          Комментарий
+          {content.commentLabel}
         </label>
         <textarea
           value={comment}
           onChange={(e) => setComment(e.target.value)}
           rows={3}
           className="input-field resize-none"
-          placeholder="Опишите задачу или адрес объекта"
+          placeholder={content.commentPlaceholder}
         />
       </div>
       <label className="flex items-start gap-2 text-sm text-steel">
@@ -133,21 +135,21 @@ export function ContactForm({ services, defaultService }: ContactFormProps) {
           required
         />
         <span>
-          Согласен с{" "}
+          {content.privacyText}{" "}
           <a href="/privacy" className="underline text-ink">
-            политикой конфиденциальности
+            {content.privacyLink}
           </a>
         </span>
       </label>
       {status === "error" && (
-        <p className="text-accent text-sm">Проверьте данные и попробуйте снова</p>
+        <p className="text-accent text-sm">{content.errorMessage}</p>
       )}
       <MagneticButton
         type="submit"
         disabled={status === "loading"}
         className="w-full btn-accent py-4 text-base disabled:opacity-50"
       >
-        {status === "loading" ? "Отправка..." : "Отправить заявку"}
+        {status === "loading" ? content.submittingLabel : content.submitLabel}
       </MagneticButton>
     </form>
   );

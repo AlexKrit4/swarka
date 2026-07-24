@@ -1,15 +1,16 @@
 "use client";
 
-import type { SiteSettings } from "@/lib/types";
+import type { SiteContent, SiteSettings } from "@/lib/types";
 import { ArrowIcon } from "./ArrowIcon";
 import { Reveal } from "./Reveal";
 import { MagneticButton } from "./MagneticButton";
 
 interface PromoProps {
   settings: SiteSettings;
+  content: SiteContent["promo"];
 }
 
-export function Promo({ settings }: PromoProps) {
+export function Promo({ settings, content }: PromoProps) {
   if (!settings.promoEnabled) return null;
 
   return (
@@ -37,7 +38,7 @@ export function Promo({ settings }: PromoProps) {
               )}
             </div>
             <MagneticButton href="#contact" className="btn-accent px-8 py-3.5 text-base shrink-0">
-              Получить предложение
+              {content.cta}
               <ArrowIcon className="w-5 h-5" />
             </MagneticButton>
           </div>

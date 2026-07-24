@@ -47,11 +47,13 @@ function SettingsContent() {
           <input placeholder="Telegram (username)" value={settings.telegram ?? ""} onChange={(e) => update("telegram", e.target.value)} />
           <input placeholder="Email" value={settings.email ?? ""} onChange={(e) => update("email", e.target.value)} />
           <input placeholder="Зона работы" value={settings.workZone} onChange={(e) => update("workZone", e.target.value)} />
+          <input placeholder="Адрес" value={settings.address ?? ""} onChange={(e) => update("address", e.target.value)} />
         </section>
 
         <section className="card space-y-3">
           <h2 className="font-semibold">Главная страница</h2>
           <input placeholder="Текст логотипа" value={settings.logoText ?? ""} onChange={(e) => update("logoText", e.target.value)} />
+          <ImageUpload label="Логотип (картинка)" value={settings.logoUrl} onChange={(url) => update("logoUrl", url)} />
           <input placeholder="Заголовок Hero" value={settings.heroTitle} onChange={(e) => update("heroTitle", e.target.value)} />
           <textarea placeholder="Подзаголовок Hero" rows={2} value={settings.heroSubtitle ?? ""} onChange={(e) => update("heroSubtitle", e.target.value)} />
           <ImageUpload label="Фото Hero" value={settings.heroImageUrl} onChange={(url) => update("heroImageUrl", url)} />

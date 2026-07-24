@@ -9,6 +9,8 @@ const NAV = [
   { href: "/", label: "Дашборд" },
   { href: "/services", label: "Услуги" },
   { href: "/portfolio", label: "Наши работы" },
+  { href: "/content", label: "Контент сайта" },
+  { href: "/why-us", label: "Преимущества" },
   { href: "/settings", label: "Настройки" },
   { href: "/faq", label: "FAQ" },
   { href: "/reviews", label: "Отзывы" },

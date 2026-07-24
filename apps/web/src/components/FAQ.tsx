@@ -3,14 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import type { FaqItem } from "@/lib/types";
+import type { SiteContent } from "@swarka/shared";
 import { SectionHeading } from "./SectionHeading";
 import { Reveal } from "./Reveal";
 
 interface FAQProps {
   items: FaqItem[];
+  content: SiteContent["faq"];
 }
 
-export function FAQ({ items }: FAQProps) {
+export function FAQ({ items, content }: FAQProps) {
   const [openId, setOpenId] = useState<string | null>(items[0]?.id ?? null);
   const answerRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -33,7 +35,12 @@ export function FAQ({ items }: FAQProps) {
   return (
     <section className="py-20 lg:py-28 bg-paper">
       <div className="max-w-3xl mx-auto px-4 lg:px-8">
-        <SectionHeading eyebrow="FAQ" title="Частые вопросы" align="center" />
+        <SectionHeading
+          eyebrow={content.eyebrow}
+          title={content.title}
+          subtitle={content.subtitle}
+          align="center"
+        />
         <Reveal>
           <div className="space-y-3">
             {items.map((item) => {
