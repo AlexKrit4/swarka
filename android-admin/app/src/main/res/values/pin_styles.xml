@@ -1,0 +1,8 @@
+<resources>
+    <style name="PinDot">
+        <item name="android:layout_width">14dp</item>
+        <item name="android:layout_height">14dp</item>
+        <item name="android:layout_margin">8dp</item>
+        <item name="android:background">@drawable/pin_dot_empty</item>
+    </style>
+</resources>
