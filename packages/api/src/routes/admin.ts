@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import bcrypt from "bcryptjs";
 import { prisma, LeadStatus } from "@swarka/database";
-import { requireAuth, requireSuperAdmin } from "../plugins/auth.js";
+import { requireAuth, requireEditor, requireSuperAdmin } from "../plugins/auth.js";
 import { deleteUpload, saveUpload } from "../lib/uploads.js";
 import {
   createSiteSnapshot,
@@ -21,12 +21,14 @@ const userCreateSchema = z.object({
   email: z.string().min(1).max(120),
   password: z.string().min(6),
   name: z.string().optional(),
+  role: z.enum(["ADMIN", "VIEWER"]).default("ADMIN"),
 });
 
 const userUpdateSchema = z.object({
   email: z.string().min(1).max(120).optional(),
   password: z.string().min(6).optional(),
   name: z.string().nullable().optional(),
+  role: z.enum(["ADMIN", "VIEWER"]).optional(),
 });
 
 export async function adminRoutes(app: FastifyInstance) {
@@ -104,7 +106,7 @@ export async function adminRoutes(app: FastifyInstance) {
         email: parsed.data.email,
         password,
         name: parsed.data.name || "Администратор",
-        role: "ADMIN",
+        role: parsed.data.role,
       },
       select: { id: true, email: true, name: true, role: true, createdAt: true },
     });
@@ -126,10 +128,11 @@ export async function adminRoutes(app: FastifyInstance) {
       return reply.status(403).send({ error: "Cannot edit main admin" });
     }
 
-    const data: { email?: string; name?: string | null; password?: string } = {};
+    const data: { email?: string; name?: string | null; password?: string; role?: string } = {};
     if (parsed.data.email) data.email = parsed.data.email;
     if (parsed.data.name !== undefined) data.name = parsed.data.name;
     if (parsed.data.password) data.password = await bcrypt.hash(parsed.data.password, 10);
+    if (parsed.data.role) data.role = parsed.data.role;
 
     return prisma.user.update({
       where: { id },
@@ -175,7 +178,7 @@ export async function adminRoutes(app: FastifyInstance) {
     return prisma.siteSettings.findUnique({ where: { id: "singleton" } });
   });
 
-  app.put("/api/admin/settings", { preHandler: requireAuth }, async (request) => {
+  app.put("/api/admin/settings", { preHandler: requireEditor }, async (request) => {
     const user = getAuditUser(request);
     const before = await prisma.siteSettings.findUnique({ where: { id: "singleton" } });
     await createSiteSnapshot(user, "Автоснимок перед изменением настроек");
@@ -201,7 +204,7 @@ export async function adminRoutes(app: FastifyInstance) {
     return prisma.service.findMany({ orderBy: { sortOrder: "asc" } });
   });
 
-  app.post("/api/admin/services", { preHandler: requireAuth }, async (request) => {
+  app.post("/api/admin/services", { preHandler: requireEditor }, async (request) => {
     const user = getAuditUser(request);
     const data = request.body as Parameters<typeof prisma.service.create>[0]["data"];
     const created = await prisma.service.create({ data });
@@ -216,7 +219,7 @@ export async function adminRoutes(app: FastifyInstance) {
     return created;
   });
 
-  app.put("/api/admin/services/:id", { preHandler: requireAuth }, async (request) => {
+  app.put("/api/admin/services/:id", { preHandler: requireEditor }, async (request) => {
     const user = getAuditUser(request);
     const { id } = request.params as { id: string };
     const before = await prisma.service.findUnique({ where: { id } });
@@ -234,7 +237,7 @@ export async function adminRoutes(app: FastifyInstance) {
     return updated;
   });
 
-  app.delete("/api/admin/services/:id", { preHandler: requireAuth }, async (request) => {
+  app.delete("/api/admin/services/:id", { preHandler: requireEditor }, async (request) => {
     const user = getAuditUser(request);
     const { id } = request.params as { id: string };
     const item = await prisma.service.findUnique({ where: { id } });
@@ -258,7 +261,7 @@ export async function adminRoutes(app: FastifyInstance) {
     return prisma.portfolioItem.findMany({ orderBy: { sortOrder: "asc" } });
   });
 
-  app.post("/api/admin/portfolio", { preHandler: requireAuth }, async (request) => {
+  app.post("/api/admin/portfolio", { preHandler: requireEditor }, async (request) => {
     const user = getAuditUser(request);
     const data = request.body as Parameters<typeof prisma.portfolioItem.create>[0]["data"];
     const created = await prisma.portfolioItem.create({ data });
@@ -273,7 +276,7 @@ export async function adminRoutes(app: FastifyInstance) {
     return created;
   });
 
-  app.put("/api/admin/portfolio/:id", { preHandler: requireAuth }, async (request) => {
+  app.put("/api/admin/portfolio/:id", { preHandler: requireEditor }, async (request) => {
     const user = getAuditUser(request);
     const { id } = request.params as { id: string };
     const before = await prisma.portfolioItem.findUnique({ where: { id } });
@@ -291,7 +294,7 @@ export async function adminRoutes(app: FastifyInstance) {
     return updated;
   });
 
-  app.delete("/api/admin/portfolio/:id", { preHandler: requireAuth }, async (request) => {
+  app.delete("/api/admin/portfolio/:id", { preHandler: requireEditor }, async (request) => {
     const user = getAuditUser(request);
     const { id } = request.params as { id: string };
     const item = await prisma.portfolioItem.findUnique({ where: { id } });
@@ -315,7 +318,7 @@ export async function adminRoutes(app: FastifyInstance) {
     return prisma.faqItem.findMany({ orderBy: { sortOrder: "asc" } });
   });
 
-  app.post("/api/admin/faq", { preHandler: requireAuth }, async (request) => {
+  app.post("/api/admin/faq", { preHandler: requireEditor }, async (request) => {
     const user = getAuditUser(request);
     const data = request.body as Parameters<typeof prisma.faqItem.create>[0]["data"];
     const created = await prisma.faqItem.create({ data });
@@ -330,7 +333,7 @@ export async function adminRoutes(app: FastifyInstance) {
     return created;
   });
 
-  app.put("/api/admin/faq/:id", { preHandler: requireAuth }, async (request) => {
+  app.put("/api/admin/faq/:id", { preHandler: requireEditor }, async (request) => {
     const user = getAuditUser(request);
     const { id } = request.params as { id: string };
     const before = await prisma.faqItem.findUnique({ where: { id } });
@@ -348,7 +351,7 @@ export async function adminRoutes(app: FastifyInstance) {
     return updated;
   });
 
-  app.delete("/api/admin/faq/:id", { preHandler: requireAuth }, async (request) => {
+  app.delete("/api/admin/faq/:id", { preHandler: requireEditor }, async (request) => {
     const user = getAuditUser(request);
     const { id } = request.params as { id: string };
     const item = await prisma.faqItem.findUnique({ where: { id } });
@@ -371,7 +374,7 @@ export async function adminRoutes(app: FastifyInstance) {
     return prisma.review.findMany({ orderBy: { sortOrder: "asc" } });
   });
 
-  app.post("/api/admin/reviews", { preHandler: requireAuth }, async (request) => {
+  app.post("/api/admin/reviews", { preHandler: requireEditor }, async (request) => {
     const user = getAuditUser(request);
     const data = request.body as Parameters<typeof prisma.review.create>[0]["data"];
     const created = await prisma.review.create({ data });
@@ -386,7 +389,7 @@ export async function adminRoutes(app: FastifyInstance) {
     return created;
   });
 
-  app.put("/api/admin/reviews/:id", { preHandler: requireAuth }, async (request) => {
+  app.put("/api/admin/reviews/:id", { preHandler: requireEditor }, async (request) => {
     const user = getAuditUser(request);
     const { id } = request.params as { id: string };
     const before = await prisma.review.findUnique({ where: { id } });
@@ -404,7 +407,7 @@ export async function adminRoutes(app: FastifyInstance) {
     return updated;
   });
 
-  app.delete("/api/admin/reviews/:id", { preHandler: requireAuth }, async (request) => {
+  app.delete("/api/admin/reviews/:id", { preHandler: requireEditor }, async (request) => {
     const user = getAuditUser(request);
     const { id } = request.params as { id: string };
     const item = await prisma.review.findUnique({ where: { id } });
@@ -427,13 +430,13 @@ export async function adminRoutes(app: FastifyInstance) {
     return prisma.lead.findMany({ orderBy: { createdAt: "desc" } });
   });
 
-  app.put("/api/admin/leads/:id", { preHandler: requireAuth }, async (request) => {
+  app.put("/api/admin/leads/:id", { preHandler: requireEditor }, async (request) => {
     const { id } = request.params as { id: string };
     const data = request.body as { status?: LeadStatus; note?: string };
     return prisma.lead.update({ where: { id }, data });
   });
 
-  app.delete("/api/admin/leads/:id", { preHandler: requireAuth }, async (request) => {
+  app.delete("/api/admin/leads/:id", { preHandler: requireEditor }, async (request) => {
     const { id } = request.params as { id: string };
     await prisma.lead.delete({ where: { id } });
     return { success: true };
@@ -460,7 +463,7 @@ export async function adminRoutes(app: FastifyInstance) {
     });
   });
 
-  app.post("/api/admin/snapshots", { preHandler: requireAuth }, async (request) => {
+  app.post("/api/admin/snapshots", { preHandler: requireEditor }, async (request) => {
     const user = getAuditUser(request);
     const body = (request.body ?? {}) as { label?: string };
     const snapshot = await createSiteSnapshot(user, body.label);
@@ -475,7 +478,7 @@ export async function adminRoutes(app: FastifyInstance) {
     return snapshot;
   });
 
-  app.post("/api/admin/changelog/:id/restore", { preHandler: requireAuth }, async (request, reply) => {
+  app.post("/api/admin/changelog/:id/restore", { preHandler: requireEditor }, async (request, reply) => {
     const user = getAuditUser(request);
     const { id } = request.params as { id: string };
     try {
@@ -494,7 +497,7 @@ export async function adminRoutes(app: FastifyInstance) {
     }
   });
 
-  app.post("/api/admin/snapshots/:id/restore", { preHandler: requireAuth }, async (request, reply) => {
+  app.post("/api/admin/snapshots/:id/restore", { preHandler: requireEditor }, async (request, reply) => {
     const user = getAuditUser(request);
     const { id } = request.params as { id: string };
     try {
@@ -514,7 +517,7 @@ export async function adminRoutes(app: FastifyInstance) {
   });
 
   // Upload
-  app.post("/api/admin/upload", { preHandler: requireAuth }, async (request, reply) => {
+  app.post("/api/admin/upload", { preHandler: requireEditor }, async (request, reply) => {
     const file = await request.file();
     if (!file) {
       return reply.status(400).send({ error: "No file uploaded" });

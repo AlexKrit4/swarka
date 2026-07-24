@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMe } from "@/lib/api";
 import { getToken } from "@/lib/auth";
+import { canEditRole } from "@/lib/permissions";
 import { AdminLayout } from "@/components/AdminLayout";
 
 export type AdminUser = {
@@ -17,6 +18,11 @@ const AdminUserContext = createContext<AdminUser | null>(null);
 
 export function useAdminUser() {
   return useContext(AdminUserContext);
+}
+
+export function useCanEdit() {
+  const user = useAdminUser();
+  return canEditRole(user?.role);
 }
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {

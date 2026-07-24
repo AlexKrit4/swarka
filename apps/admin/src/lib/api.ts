@@ -77,6 +77,7 @@ export async function createAdmin(data: {
   email: string;
   password: string;
   name?: string;
+  role?: "ADMIN" | "VIEWER";
 }) {
   return apiFetch<AdminAccount>("/api/admin/users", {
     method: "POST",
@@ -86,7 +87,7 @@ export async function createAdmin(data: {
 
 export async function updateAdmin(
   id: string,
-  data: { email?: string; password?: string; name?: string | null }
+  data: { email?: string; password?: string; name?: string | null; role?: "ADMIN" | "VIEWER" }
 ) {
   return apiFetch<AdminAccount>(`/api/admin/users/${id}`, {
     method: "PUT",
