@@ -3,14 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import type { Service } from "@/lib/types";
+import type { SiteContent } from "@swarka/shared";
+import { formatTemplate } from "@swarka/shared";
 import { submitLead } from "@/lib/api";
 import { MagneticButton } from "./MagneticButton";
 
 interface CalculatorModalProps {
   services: Service[];
+  content: SiteContent["calculator"];
 }
 
-export function CalculatorModal({ services }: CalculatorModalProps) {
+export function CalculatorModal({ services, content }: CalculatorModalProps) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);
   const [serviceType, setServiceType] = useState("");
@@ -67,13 +70,15 @@ export function CalculatorModal({ services }: CalculatorModalProps) {
     setStatus("idle");
   };
 
+  const stepLabel = formatTemplate(content.stepLabel, { step: Math.min(step, 3) });
+
   return (
     <>
       <MagneticButton
         onClick={() => setOpen(true)}
         className="fixed bottom-20 right-4 z-30 hidden sm:flex items-center gap-2 bg-ink text-paper px-5 py-3 text-sm font-semibold shadow-[0_16px_40px_-16px_rgba(0,0,0,0.5)] border border-white/10"
       >
-        Быстрый расчёт
+        {content.buttonLabel}
       </MagneticButton>
 
       {open && (
@@ -91,13 +96,13 @@ export function CalculatorModal({ services }: CalculatorModalProps) {
               ×
             </button>
 
-            <p className="section-eyebrow text-accent mb-2">Калькулятор</p>
-            <h3 className="font-display text-xl font-semibold mb-1 text-ink">Быстрый расчёт</h3>
-            <p className="text-steel text-sm mb-6">Шаг {Math.min(step, 3)} из 3</p>
+            <p className="section-eyebrow text-accent mb-2">{content.eyebrow}</p>
+            <h3 className="font-display text-xl font-semibold mb-1 text-ink">{content.title}</h3>
+            <p className="text-steel text-sm mb-6">{stepLabel}</p>
 
             {step === 1 && (
               <div>
-                <p className="font-medium mb-3 text-ink">Какой тип конструкции вам нужен?</p>
+                <p className="font-medium mb-3 text-ink">{content.step1Question}</p>
                 <div className="space-y-2">
                   {services.slice(0, 5).map((s) => (
                     <button
@@ -118,14 +123,14 @@ export function CalculatorModal({ services }: CalculatorModalProps) {
 
             {step === 2 && (
               <div>
-                <p className="font-medium mb-3 text-ink">Примерная площадь (м²)</p>
+                <p className="font-medium mb-3 text-ink">{content.step2Question}</p>
                 <input
                   type="number"
                   min="1"
                   value={area}
                   onChange={(e) => setArea(e.target.value)}
                   className="input-field mb-4"
-                  placeholder="Например, 20"
+                  placeholder={content.step2Placeholder}
                 />
                 <button
                   type="button"
@@ -133,20 +138,20 @@ export function CalculatorModal({ services }: CalculatorModalProps) {
                   disabled={!area}
                   className="w-full btn-accent py-3 disabled:opacity-50"
                 >
-                  Далее
+                  {content.step2Next}
                 </button>
               </div>
             )}
 
             {step === 3 && status !== "success" && (
               <div>
-                <p className="font-medium mb-3 text-ink">Оставьте телефон — пришлём расчёт</p>
+                <p className="font-medium mb-3 text-ink">{content.step3Question}</p>
                 <input
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(formatPhone(e.target.value))}
                   className="input-field mb-4"
-                  placeholder="+7 (___) ___-__-__"
+                  placeholder={content.step3Placeholder}
                 />
                 <button
                   type="button"
@@ -154,17 +159,19 @@ export function CalculatorModal({ services }: CalculatorModalProps) {
                   disabled={status === "loading"}
                   className="w-full btn-ink py-3 disabled:opacity-50"
                 >
-                  {status === "loading" ? "Отправка..." : "Получить расчёт"}
+                  {status === "loading" ? content.step3Submitting : content.step3Submit}
                 </button>
               </div>
             )}
 
             {step === 4 && status === "success" && (
               <div className="text-center py-4">
-                <p className="font-display text-xl font-semibold text-ink mb-2">Спасибо!</p>
-                <p className="text-steel">Мы перезвоним с расчётом в ближайшее время.</p>
+                <p className="font-display text-xl font-semibold text-ink mb-2">
+                  {content.successTitle}
+                </p>
+                <p className="text-steel">{content.successMessage}</p>
                 <button type="button" onClick={reset} className="mt-4 text-sm underline text-ink">
-                  Закрыть
+                  {content.closeLabel}
                 </button>
               </div>
             )}

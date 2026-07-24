@@ -1,4 +1,7 @@
-import "dotenv/config";
+import {
+  DEFAULT_SITE_CONTENT,
+  DEFAULT_PRIVACY_CONTENT,
+} from "@swarka/shared";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
@@ -70,6 +73,8 @@ async function main() {
       seoDescription:
         "Сварочные и монтажные работы: навесы, козырьки, ворота, перголы. Бесплатный замер, гарантия 3 года. Москва и область.",
       whyUsJson: JSON.stringify(whyUs),
+      contentJson: JSON.stringify(DEFAULT_SITE_CONTENT),
+      privacyContent: DEFAULT_PRIVACY_CONTENT,
       workZone: "Москва и Московская область",
       address: "г. Москва, выезд по всей области",
     },

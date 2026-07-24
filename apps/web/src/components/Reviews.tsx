@@ -1,20 +1,27 @@
 "use client";
 
 import type { Review } from "@/lib/types";
+import type { SiteContent } from "@swarka/shared";
 import { SectionHeading } from "./SectionHeading";
 import { Stagger } from "./Stagger";
 
 interface ReviewsProps {
   reviews: Review[];
+  content: SiteContent["reviews"];
 }
 
-export function Reviews({ reviews }: ReviewsProps) {
+export function Reviews({ reviews, content }: ReviewsProps) {
   if (!reviews.length) return null;
 
   return (
     <section className="py-20 lg:py-28 bg-paper-deep metal-grid">
       <div className="max-w-7xl mx-auto px-4 lg:px-8">
-        <SectionHeading eyebrow="Отзывы" title="Клиенты о нас" align="center" />
+        <SectionHeading
+          eyebrow={content.eyebrow}
+          title={content.title}
+          subtitle={content.subtitle}
+          align="center"
+        />
         <Stagger className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {reviews.map((review) => (
             <article

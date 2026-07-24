@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">SWARKA Admin</string>
+    <string name="setup_pin_title">Создайте PIN-код</string>
+    <string name="setup_pin_subtitle">PIN защитит доступ к админке, как в банковском приложении</string>
+    <string name="confirm_pin_title">Повторите PIN</string>
+    <string name="unlock_pin_title">Введите PIN</string>
+    <string name="unlock_pin_subtitle">Для входа в SWARKA Admin</string>
+    <string name="pin_mismatch">PIN не совпадает. Попробуйте снова</string>
+    <string name="pin_invalid">Неверный PIN</string>
+    <string name="pin_too_short">PIN должен содержать минимум 4 цифры</string>
+    <string name="use_fingerprint">Войти по отпечатку</string>
+    <string name="enable_biometric">Включить вход по отпечатку</string>
+    <string name="skip_biometric">Пропустить</string>
+    <string name="loading_admin">Загрузка админки…</string>
+    <string name="login_failed">Не удалось войти. Проверьте интернет</string>
+    <string name="delete_digit">Удалить</string>
+    <string name="biometric_title">SWARKA Admin</string>
+    <string name="biometric_subtitle">Подтвердите отпечаток пальца</string>
+</resources>
