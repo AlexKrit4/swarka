@@ -112,7 +112,40 @@ export async function getDashboard() {
     recentLeads: Lead[];
     totalServices: number;
     totalPortfolio: number;
+    analytics: {
+      visitsToday: number;
+      visitsWeek: number;
+      uniqueVisitorsToday: number;
+      uniqueVisitorsWeek: number;
+      newVisitorsToday: number;
+      newVisitorsWeek: number;
+    };
   }>("/api/admin/dashboard");
+}
+
+export interface AnalyticsSummary {
+  periodDays: number;
+  from: string;
+  to: string;
+  visits: number;
+  uniqueVisitors: number;
+  newVisitors: number;
+  leads: number;
+  conversionRate: number;
+  today: {
+    visits: number;
+    uniqueVisitors: number;
+    newVisitors: number;
+    leads: number;
+  };
+  visitsByDay: { date: string; visits: number; uniqueVisitors: number }[];
+  topPages: { path: string; visits: number }[];
+  topReferrers: { referer: string; visits: number }[];
+  devices: { device: string; visits: number }[];
+}
+
+export async function getAnalytics(days = 7) {
+  return apiFetch<AnalyticsSummary>(`/api/admin/analytics?days=${days}`);
 }
 
 export interface Lead {

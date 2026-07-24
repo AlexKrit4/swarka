@@ -10,6 +10,7 @@ import {
   restoreChangeLog,
   restoreSiteSnapshot,
 } from "../lib/audit.js";
+import { getAnalyticsSummary, getDashboardAnalytics } from "../lib/analytics.js";
 import { z } from "zod";
 
 const pushRegisterSchema = z.object({
@@ -165,16 +166,23 @@ export async function adminRoutes(app: FastifyInstance) {
     const weekStart = new Date(todayStart);
     weekStart.setDate(weekStart.getDate() - 7);
 
-    const [todayCount, weekCount, recentLeads, totalServices, totalPortfolio] =
+    const [todayCount, weekCount, recentLeads, totalServices, totalPortfolio, analytics] =
       await Promise.all([
         prisma.lead.count({ where: { createdAt: { gte: todayStart } } }),
         prisma.lead.count({ where: { createdAt: { gte: weekStart } } }),
         prisma.lead.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
         prisma.service.count(),
         prisma.portfolioItem.count(),
+        getDashboardAnalytics(),
       ]);
 
-    return { todayCount, weekCount, recentLeads, totalServices, totalPortfolio };
+    return { todayCount, weekCount, recentLeads, totalServices, totalPortfolio, analytics };
+  });
+
+  app.get("/api/admin/analytics", { preHandler: requireAuth }, async (request) => {
+    const { days } = request.query as { days?: string };
+    const parsedDays = Number(days ?? 7);
+    return getAnalyticsSummary(Number.isFinite(parsedDays) ? parsedDays : 7);
   });
 
   // Settings

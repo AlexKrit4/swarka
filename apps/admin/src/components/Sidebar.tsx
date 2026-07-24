@@ -8,6 +8,7 @@ import { isMobileApp, switchAccount } from "@/lib/mobile-bridge";
 
 const NAV = [
   { href: "/", label: "Дашборд" },
+  { href: "/analytics", label: "Статистика" },
   { href: "/services", label: "Услуги" },
   { href: "/portfolio", label: "Наши работы" },
   { href: "/content", label: "Контент сайта" },

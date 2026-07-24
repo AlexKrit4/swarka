@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { prisma } from "@swarka/database";
 import { sendTelegramNotification } from "../lib/telegram.js";
 import { sendLeadPushNotification } from "../lib/fcm.js";
+import { recordSiteVisit } from "../lib/analytics.js";
 import { getMobileAppVersionInfo } from "../lib/mobile-app.js";
 import { z } from "zod";
 
@@ -13,6 +14,15 @@ const leadSchema = z.object({
   serviceType: z.string().optional(),
   comment: z.string().optional(),
   source: z.string().optional(),
+});
+
+const trackSchema = z.object({
+  visitorId: z.string().min(8).max(64).optional(),
+  path: z.string().min(1).max(500),
+  referer: z.string().max(2000).optional(),
+  utmSource: z.string().max(200).optional(),
+  utmMedium: z.string().max(200).optional(),
+  utmCampaign: z.string().max(200).optional(),
 });
 
 export async function publicRoutes(app: FastifyInstance) {
@@ -48,6 +58,20 @@ export async function publicRoutes(app: FastifyInstance) {
     reply.header("Content-Type", "application/vnd.android.package-archive");
     reply.header("Content-Disposition", 'attachment; filename="SWARKA-Admin.apk"');
     return reply.send(createReadStream(apkPath));
+  });
+
+  app.post("/api/track", async (request, reply) => {
+    const parsed = trackSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: "Invalid payload" });
+    }
+
+    try {
+      const result = await recordSiteVisit(request, parsed.data);
+      return { success: true, ...result };
+    } catch {
+      return reply.status(500).send({ error: "Track failed" });
+    }
   });
 
   app.get("/api/settings", async () => {
