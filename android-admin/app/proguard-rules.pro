@@ -8,4 +8,6 @@
 
 -keep class ru.swarka.admin.AdminWebActivity$AndroidBridge { *; }
 
+-keep class ru.swarka.admin.update.** { *; }
+
 -dontwarn javax.annotation.**

@@ -102,7 +102,7 @@ class PinUnlockActivity : AppCompatActivity() {
     }
 
     private fun openAdmin() {
-        startActivity(Intent(this, AccountPickerActivity::class.java))
+        startActivity(Intent(this, UpdateGateActivity::class.java))
         finish()
     }
 

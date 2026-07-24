@@ -21,7 +21,8 @@ COPY --from=builder /app/packages/database ./packages/database
 COPY --from=builder /app/packages/api ./packages/api
 
 WORKDIR /app/packages/api
-RUN mkdir -p /app/uploads
+RUN mkdir -p /app/uploads /app/mobile
+COPY releases/SWARKA-Admin.apk /app/mobile/SWARKA-Admin.apk
 
 ENV UPLOADS_DIR=/app/uploads
 EXPOSE 4000
