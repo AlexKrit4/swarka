@@ -10,5 +10,7 @@
 
 -keep class ru.swarka.admin.update.** { *; }
 -keep class ru.swarka.admin.notifications.** { *; }
+-keep class com.google.firebase.** { *; }
+-dontwarn me.leolin.shortcutbadger.**
 
 -dontwarn javax.annotation.**

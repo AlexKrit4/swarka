@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -11,8 +12,8 @@ android {
         applicationId = "ru.swarka.admin"
         minSdk = 26
         targetSdk = 35
-        versionCode = 11
-        versionName = "1.2.0"
+        versionCode = 12
+        versionName = "1.3.0"
 
         buildConfigField("String", "ADMIN_URL", "\"https://admin.swarka-i-voditel.ru\"")
         buildConfigField("String", "API_URL", "\"https://api.swarka-i-voditel.ru\"")
@@ -70,4 +71,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
     implementation("androidx.work:work-runtime-ktx:2.10.0")
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+    implementation("com.google.firebase:firebase-messaging-ktx")
+    implementation("me.leolin:ShortcutBadger:1.1.22@aar")
 }

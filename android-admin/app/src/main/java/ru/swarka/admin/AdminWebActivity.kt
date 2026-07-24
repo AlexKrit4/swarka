@@ -42,6 +42,8 @@ import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import ru.swarka.admin.notifications.FcmRegistrar
+import ru.swarka.admin.notifications.LeadBadgeManager
 import ru.swarka.admin.notifications.LeadChecker
 import ru.swarka.admin.notifications.LeadNotificationScheduler
 import ru.swarka.admin.security.SessionManager
@@ -55,8 +57,10 @@ class AdminWebActivity : AppCompatActivity() {
     private lateinit var errorText: TextView
     private lateinit var offlinePanel: LinearLayout
     private lateinit var retryButton: MaterialButton
+    private lateinit var loadingOverlay: LinearLayout
     private var tokenInjected = false
     private var isLoggingOut = false
+    private var pendingDeepLinkPath: String? = null
     private var isOnline = true
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
     private var pendingFileChooserIntent: Intent? = null
@@ -149,14 +153,36 @@ class AdminWebActivity : AppCompatActivity() {
         errorText = findViewById(R.id.errorText)
         offlinePanel = findViewById(R.id.offlinePanel)
         retryButton = findViewById(R.id.retryButton)
+        loadingOverlay = findViewById(R.id.loadingOverlay)
 
         applyWebViewDarkTheme()
         setupWebView()
         setupSwipeRefresh()
         setupNetworkMonitor()
         setupRetryButton()
+        handleLaunchIntent(intent)
         scheduleLeadChecks()
+        FcmRegistrar.registerCurrentTokenAsync(this)
         loadAdminIfReady()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleLaunchIntent(intent)
+        pendingDeepLinkPath?.let {
+            if (tokenInjected) {
+                navigateToPath(it)
+                pendingDeepLinkPath = null
+            }
+        }
+    }
+
+    private fun handleLaunchIntent(intent: Intent?) {
+        val leadId = intent?.getStringExtra(EXTRA_LEAD_ID)
+        if (!leadId.isNullOrBlank()) {
+            pendingDeepLinkPath = "/leads?lead=$leadId"
+        }
     }
 
     private fun applyWebViewDarkTheme() {
@@ -520,7 +546,45 @@ class AdminWebActivity : AppCompatActivity() {
         """.trimIndent()
         webView.evaluateJavascript(script) {
             tokenInjected = true
+            pendingDeepLinkPath?.let { path ->
+                pendingDeepLinkPath = null
+                navigateToPath(path)
+            }
         }
+    }
+
+    private fun navigateToPath(path: String) {
+        val url = BuildConfig.ADMIN_URL.trimEnd('/') + path
+        webView.loadUrl(url)
+    }
+
+    private fun dialPhone(phone: String) {
+        val normalized = phone.trim()
+        if (normalized.isBlank()) return
+        startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$normalized")))
+    }
+
+    private fun launchWhatsApp(phone: String, text: String?) {
+        val digits = phone.filter { it.isDigit() }
+        if (digits.isBlank()) return
+        val builder = StringBuilder("https://wa.me/$digits")
+        if (!text.isNullOrBlank()) {
+            builder.append("?text=")
+            builder.append(Uri.encode(text))
+        }
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(builder.toString())))
+        } catch (_: ActivityNotFoundException) {
+            Toast.makeText(this, R.string.file_chooser_unavailable, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun showErrorFeedback(message: String) {
+        Toast.makeText(this, getString(R.string.error_toast_prefix, message), Toast.LENGTH_LONG).show()
+    }
+
+    private fun setLoadingOverlay(visible: Boolean) {
+        loadingOverlay.visibility = if (visible) View.VISIBLE else View.GONE
     }
 
     override fun onDestroy() {
@@ -556,9 +620,48 @@ class AdminWebActivity : AppCompatActivity() {
         fun onSaved() {
             runOnUiThread { showSavedFeedback() }
         }
+
+        @JavascriptInterface
+        fun onError(message: String?) {
+            runOnUiThread {
+                showErrorFeedback(message?.ifBlank { getString(R.string.login_failed) } ?: getString(R.string.login_failed))
+            }
+        }
+
+        @JavascriptInterface
+        fun onLoading(loading: Boolean) {
+            runOnUiThread { setLoadingOverlay(loading) }
+        }
+
+        @JavascriptInterface
+        fun openDialer(phone: String?) {
+            runOnUiThread {
+                if (phone != null) dialPhone(phone)
+            }
+        }
+
+        @JavascriptInterface
+        fun openWhatsApp(phone: String?, text: String?) {
+            runOnUiThread {
+                if (phone != null) launchWhatsApp(phone, text)
+            }
+        }
+
+        @JavascriptInterface
+        fun clearLeadBadge() {
+            runOnUiThread { LeadBadgeManager.clear(this@AdminWebActivity) }
+        }
     }
 
     companion object {
         const val JS_BRIDGE_NAME = "SwarkaAdmin"
+        const val EXTRA_LEAD_ID = "lead_id"
+
+        fun createLeadIntent(context: Context, leadId: String): Intent {
+            return Intent(context, AdminWebActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra(EXTRA_LEAD_ID, leadId)
+            }
+        }
     }
 }

@@ -31,7 +31,13 @@ async function apiFetch<T>(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error((err as { error?: string }).error ?? "Request failed");
+    const message = (err as { error?: string }).error ?? "Request failed";
+    if (typeof window !== "undefined") {
+      import("./mobile-bridge").then(({ isMobileApp, notifyError }) => {
+        if (isMobileApp()) notifyError(message);
+      });
+    }
+    throw new Error(message);
   }
 
   return res.json();

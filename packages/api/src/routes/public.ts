@@ -3,6 +3,7 @@ import { createReadStream, existsSync } from "node:fs";
 import { join } from "node:path";
 import { prisma } from "@swarka/database";
 import { sendTelegramNotification } from "../lib/telegram.js";
+import { sendLeadPushNotification } from "../lib/fcm.js";
 import { getMobileAppVersionInfo } from "../lib/mobile-app.js";
 import { z } from "zod";
 
@@ -102,6 +103,12 @@ export async function publicRoutes(app: FastifyInstance) {
       .join("\n");
 
     await sendTelegramNotification(message);
+    await sendLeadPushNotification({
+      id: lead.id,
+      name: lead.name,
+      phone: lead.phone,
+      serviceType: lead.serviceType,
+    });
 
     return { success: true, id: lead.id };
   });

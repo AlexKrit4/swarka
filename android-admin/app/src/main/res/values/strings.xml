@@ -50,4 +50,9 @@
     <string name="notification_new_lead">Новая заявка: %1$s</string>
     <string name="notification_permission_title">Уведомления о заявках</string>
     <string name="notification_permission_message">Разрешите уведомления, чтобы получать новые заявки с сайта</string>
+    <string name="notification_action_call">Позвонить</string>
+    <string name="notification_action_whatsapp">WhatsApp</string>
+    <string name="notification_action_open">Открыть заявку</string>
+    <string name="loading_overlay">Загрузка…</string>
+    <string name="error_toast_prefix">Ошибка: %1$s</string>
 </resources>

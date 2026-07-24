@@ -12,6 +12,10 @@ import {
 } from "../lib/audit.js";
 import { z } from "zod";
 
+const pushRegisterSchema = z.object({
+  token: z.string().min(1),
+});
+
 const loginSchema = z.object({
   email: z.string().min(1).max(120),
   password: z.string().min(1),
@@ -460,6 +464,40 @@ export async function adminRoutes(app: FastifyInstance) {
       },
     });
     return { leads };
+  });
+
+  app.post("/api/mobile/push/register", { preHandler: requireAuth }, async (request) => {
+    const parsed = pushRegisterSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return { success: false };
+    }
+
+    const user = request.user as { id: string };
+    await prisma.pushToken.upsert({
+      where: { token: parsed.data.token },
+      create: {
+        userId: user.id,
+        token: parsed.data.token,
+      },
+      update: {
+        userId: user.id,
+      },
+    });
+
+    return { success: true };
+  });
+
+  app.delete("/api/mobile/push/register", { preHandler: requireAuth }, async (request) => {
+    const parsed = pushRegisterSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return { success: false };
+    }
+
+    await prisma.pushToken.deleteMany({
+      where: { token: parsed.data.token },
+    });
+
+    return { success: true };
   });
 
   // Versions & audit log

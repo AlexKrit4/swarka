@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.launch
+import ru.swarka.admin.notifications.FcmRegistrar
 import ru.swarka.admin.notifications.LeadNotificationScheduler
 import ru.swarka.admin.security.SessionManager
 
@@ -148,6 +149,7 @@ class AccountPickerActivity : AppCompatActivity() {
                     }
                 }
                 LeadNotificationScheduler.schedule(this@AccountPickerActivity)
+                FcmRegistrar.registerCurrentTokenAsync(this@AccountPickerActivity)
                 startActivity(Intent(this@AccountPickerActivity, AdminWebActivity::class.java))
                 finish()
             }.onFailure {
