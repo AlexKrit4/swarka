@@ -1,4 +1,4 @@
-import { prisma } from "@swarka/database";
+import { prisma, type Prisma } from "@swarka/database";
 
 export interface AuditUser {
   id: string;
@@ -96,7 +96,7 @@ export async function restoreSiteSnapshot(snapshotId: string) {
             [key: string]: unknown;
           };
           return rest;
-        }) as Parameters<typeof tx.service.createMany>[0]["data"],
+        }) as Prisma.ServiceCreateManyInput[],
       });
     }
 
@@ -110,21 +110,21 @@ export async function restoreSiteSnapshot(snapshotId: string) {
             [key: string]: unknown;
           };
           return rest;
-        }) as Parameters<typeof tx.portfolioItem.createMany>[0]["data"],
+        }) as Prisma.PortfolioItemCreateManyInput[],
       });
     }
 
     await tx.faqItem.deleteMany();
     if (data.faq.length) {
       await tx.faqItem.createMany({
-        data: data.faq as Parameters<typeof tx.faqItem.createMany>[0]["data"],
+        data: data.faq as Prisma.FaqItemCreateManyInput[],
       });
     }
 
     await tx.review.deleteMany();
     if (data.reviews.length) {
       await tx.review.createMany({
-        data: data.reviews as Parameters<typeof tx.review.createMany>[0]["data"],
+        data: data.reviews as Prisma.ReviewCreateManyInput[],
       });
     }
   });
