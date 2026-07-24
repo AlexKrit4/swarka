@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Sidebar } from "@/components/Sidebar";
-import { useAdminUser, useCanEdit } from "@/components/AuthGuard";
+import { useAdminUser, useCanEdit } from "@/components/AdminUserContext";
 import { getRoleLabel } from "@/lib/permissions";
 
 function ReadOnlyBanner() {

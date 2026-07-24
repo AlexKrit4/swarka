@@ -1,29 +1,17 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMe } from "@/lib/api";
 import { getToken } from "@/lib/auth";
-import { canEditRole } from "@/lib/permissions";
 import { AdminLayout } from "@/components/AdminLayout";
+import {
+  AdminUserProvider,
+  type AdminUser,
+} from "@/components/AdminUserContext";
 
-export type AdminUser = {
-  id: string;
-  email: string;
-  name: string | null;
-  role: string;
-};
-
-const AdminUserContext = createContext<AdminUser | null>(null);
-
-export function useAdminUser() {
-  return useContext(AdminUserContext);
-}
-
-export function useCanEdit() {
-  const user = useAdminUser();
-  return canEditRole(user?.role);
-}
+export type { AdminUser } from "@/components/AdminUserContext";
+export { useAdminUser, useCanEdit } from "@/components/AdminUserContext";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -53,8 +41,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AdminUserContext.Provider value={user}>
+    <AdminUserProvider user={user}>
       <AdminLayout>{children}</AdminLayout>
-    </AdminUserContext.Provider>
+    </AdminUserProvider>
   );
 }
