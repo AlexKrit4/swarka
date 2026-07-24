@@ -9,6 +9,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.button.MaterialButton
 import ru.swarka.admin.security.BiometricHelper
 import ru.swarka.admin.security.PinManager
+import ru.swarka.admin.security.SessionManager
 
 class PinSetupActivity : AppCompatActivity() {
     private lateinit var pinManager: PinManager
@@ -126,7 +127,12 @@ class PinSetupActivity : AppCompatActivity() {
     }
 
     private fun openAdmin() {
-        startActivity(Intent(this, UpdateGateActivity::class.java))
+        SessionManager(this).clearAllCredentials()
+        startActivity(
+            Intent(this, UpdateGateActivity::class.java).apply {
+                putExtra(UpdateGateActivity.EXTRA_FRESH_SETUP, true)
+            }
+        )
         finish()
     }
 

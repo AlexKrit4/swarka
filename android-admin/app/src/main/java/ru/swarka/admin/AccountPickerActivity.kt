@@ -35,6 +35,9 @@ class AccountPickerActivity : AppCompatActivity() {
         setContentView(R.layout.activity_account_picker)
 
         sessionManager = SessionManager(this)
+        if (intent.getBooleanExtra(EXTRA_FRESH_SETUP, false)) {
+            sessionManager.clearAllCredentials()
+        }
         progressBar = findViewById(R.id.progressBar)
         errorText = findViewById(R.id.errorText)
         accountsList = findViewById(R.id.accountsList)
@@ -84,7 +87,7 @@ class AccountPickerActivity : AppCompatActivity() {
 
     private fun onAccountSelected(account: AdminAccount) {
         val savedPassword = sessionManager.getSavedPassword(account.id)
-        if (savedPassword != null) {
+        if (savedPassword != null && !intent.getBooleanExtra(EXTRA_FRESH_SETUP, false)) {
             loginAndOpen(account.email, savedPassword, account.id)
             return
         }
@@ -167,5 +170,9 @@ class AccountPickerActivity : AppCompatActivity() {
         }
 
         override fun getItemCount() = items.size
+    }
+
+    companion object {
+        const val EXTRA_FRESH_SETUP = "fresh_setup"
     }
 }

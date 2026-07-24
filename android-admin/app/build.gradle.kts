@@ -11,8 +11,8 @@ android {
         applicationId = "ru.swarka.admin"
         minSdk = 26
         targetSdk = 35
-        versionCode = 7
-        versionName = "1.1.4"
+        versionCode = 8
+        versionName = "1.1.5"
 
         buildConfigField("String", "ADMIN_URL", "\"https://admin.swarka-i-voditel.ru\"")
         buildConfigField("String", "API_URL", "\"https://api.swarka-i-voditel.ru\"")

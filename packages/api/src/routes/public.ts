@@ -19,7 +19,7 @@ export async function publicRoutes(app: FastifyInstance) {
 
   app.get("/api/mobile/accounts", async () => {
     return prisma.user.findMany({
-      where: { role: { in: ["ADMIN", "SUPER_ADMIN", "VIEWER"] } },
+      where: { role: { in: ["ADMIN", "VIEWER"] } },
       select: { id: true, email: true, name: true },
       orderBy: { createdAt: "asc" },
     });

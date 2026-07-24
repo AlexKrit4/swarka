@@ -142,8 +142,17 @@ class UpdateGateActivity : AppCompatActivity() {
     }
 
     private fun continueToApp() {
-        startActivity(Intent(this, AccountPickerActivity::class.java))
+        val freshSetup = intent.getBooleanExtra(EXTRA_FRESH_SETUP, false)
+        startActivity(
+            Intent(this, AccountPickerActivity::class.java).apply {
+                putExtra(AccountPickerActivity.EXTRA_FRESH_SETUP, freshSetup)
+            }
+        )
         finish()
+    }
+
+    companion object {
+        const val EXTRA_FRESH_SETUP = "fresh_setup"
     }
 
     @Deprecated("Deprecated in Java")

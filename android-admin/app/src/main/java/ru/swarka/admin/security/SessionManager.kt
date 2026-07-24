@@ -53,6 +53,15 @@ class SessionManager(context: Context) {
         prefs.edit().remove(credKey(userId)).apply()
     }
 
+    fun clearAllCredentials() {
+        val editor = prefs.edit()
+        editor.remove(KEY_TOKEN)
+        editor.remove(KEY_USER_ID)
+        editor.remove(KEY_USER_EMAIL)
+        prefs.all.keys.filter { it.startsWith("cred_") }.forEach { editor.remove(it) }
+        editor.apply()
+    }
+
     suspend fun fetchAccounts(): Result<List<AdminAccount>> = withContext(Dispatchers.IO) {
         runCatching {
             val connection = (URL("${BuildConfig.API_URL}/api/mobile/accounts").openConnection() as HttpURLConnection).apply {
