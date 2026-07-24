@@ -38,7 +38,7 @@ function SettingsContent() {
         </button>
       </div>
 
-      <div className="space-y-6 max-w-2xl">
+      <div className="space-y-6 page-stack">
         <section className="card space-y-3">
           <h2 className="font-semibold">Контакты</h2>
           <input placeholder="Название компании" value={settings.companyName} onChange={(e) => update("companyName", e.target.value)} />
