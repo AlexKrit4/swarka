@@ -27,5 +27,13 @@ button[type="submit"],
 }
 
 .card {
-  @apply bg-white rounded-xl border border-gray-100 p-5 shadow-sm;
+  @apply bg-white rounded-xl border border-gray-100 p-4 md:p-5 shadow-sm;
+}
+
+.page-header {
+  @apply flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6;
+}
+
+.page-stack {
+  @apply space-y-4 md:space-y-6 w-full max-w-full md:max-w-2xl;
 }
