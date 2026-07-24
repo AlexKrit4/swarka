@@ -26,6 +26,7 @@
     <string name="login_button">Войти</string>
     <string name="retry_accounts">Повторить загрузку аккаунтов</string>
     <string name="manual_login_hint">Список аккаунтов временно недоступен. Войдите вручную:</string>
+    <string name="app_version_label">Версия %1$s</string>
     <string name="update_available_title">Доступна новая версия!</string>
     <string name="update_available_subtitle">Версия %1$s готова к установке</string>
     <string name="update_now">Обновить</string>

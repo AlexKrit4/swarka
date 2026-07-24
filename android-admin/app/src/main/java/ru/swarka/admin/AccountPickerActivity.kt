@@ -48,6 +48,9 @@ class AccountPickerActivity : AppCompatActivity() {
         retryButton = findViewById(R.id.retryButton)
         accountsList.layoutManager = LinearLayoutManager(this)
 
+        findViewById<TextView>(R.id.versionText).text =
+            getString(R.string.app_version_label, BuildConfig.VERSION_NAME)
+
         manualLoginButton.setOnClickListener { loginManually() }
         retryButton.setOnClickListener { loadAccounts() }
 

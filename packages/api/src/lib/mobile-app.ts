@@ -1,7 +1,7 @@
 export function getMobileAppVersionInfo() {
   return {
-    versionCode: Number(process.env.MOBILE_APP_VERSION_CODE ?? 8),
-    versionName: process.env.MOBILE_APP_VERSION_NAME ?? "1.1.5",
+    versionCode: Number(process.env.MOBILE_APP_VERSION_CODE ?? 9),
+    versionName: process.env.MOBILE_APP_VERSION_NAME ?? "1.1.6",
     downloadUrl:
       process.env.MOBILE_APP_DOWNLOAD_URL ??
       "https://api.swarka-i-voditel.ru/api/mobile/app-download",
