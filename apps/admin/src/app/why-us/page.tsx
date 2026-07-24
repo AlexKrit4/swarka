@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { DEFAULT_WHY_US, parseWhyUs, type WhyUsItem } from "@swarka/shared";
+import { parseWhyUs, type WhyUsItem } from "@swarka/shared";
 import { AuthGuard } from "@/components/AuthGuard";
 import { TextField } from "@/components/ContentEditors";
 import { getSettings, updateSettings } from "@/lib/api";
@@ -14,7 +14,7 @@ const ICON_OPTIONS = [
 ];
 
 function WhyUsPageInner() {
-  const [items, setItems] = useState<WhyUsItem[]>(DEFAULT_WHY_US);
+  const [items, setItems] = useState<WhyUsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -69,6 +69,9 @@ function WhyUsPageInner() {
       </div>
 
       <div className="space-y-4 max-w-2xl">
+        {items.length === 0 && (
+          <p className="text-sm text-gray-500">Карточек нет. Блок «Почему мы» на сайте скрыт.</p>
+        )}
         {items.map((item, index) => (
           <section key={index} className="card space-y-3">
             <div className="flex items-center justify-between">

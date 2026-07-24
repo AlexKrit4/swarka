@@ -327,10 +327,12 @@ export function parseSiteContent(contentJson: string | null | undefined): SiteCo
 }
 
 export function parseWhyUs(whyUsJson: string | null | undefined): WhyUsItem[] {
-  if (!whyUsJson) return DEFAULT_WHY_US;
+  if (whyUsJson == null || whyUsJson.trim() === "") return DEFAULT_WHY_US;
   try {
     const parsed = JSON.parse(whyUsJson) as WhyUsItem[];
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_WHY_US;
+    if (!Array.isArray(parsed)) return DEFAULT_WHY_US;
+    // Пустой массив — осознанное удаление всех карточек, не подставляем дефолты.
+    return parsed;
   } catch {
     return DEFAULT_WHY_US;
   }
