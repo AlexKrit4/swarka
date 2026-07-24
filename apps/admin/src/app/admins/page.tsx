@@ -11,6 +11,7 @@ import {
   type AdminAccount,
 } from "@/lib/api";
 import { getRoleLabel, SUB_ADMIN_ROLE_OPTIONS, type SubAdminRole } from "@/lib/permissions";
+import { notifySaved } from "@/lib/mobile-bridge";
 
 type EditingAdmin = {
   id?: string;
@@ -67,6 +68,7 @@ function AdminsContent() {
       }
       setEditing(null);
       load();
+      notifySaved();
     } catch (e) {
       setError((e as Error).message || "Ошибка сохранения");
     }

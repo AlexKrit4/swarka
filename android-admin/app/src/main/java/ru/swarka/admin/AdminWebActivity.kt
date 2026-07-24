@@ -3,45 +3,95 @@ package ru.swarka.admin
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
+import android.media.AudioManager
+import android.media.ToneGenerator
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import android.view.HapticFeedbackConstants
 import android.view.View
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import com.google.android.material.button.MaterialButton
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import ru.swarka.admin.notifications.LeadChecker
+import ru.swarka.admin.notifications.LeadNotificationScheduler
 import ru.swarka.admin.security.SessionManager
+import java.io.File
 
 class AdminWebActivity : AppCompatActivity() {
     private lateinit var sessionManager: SessionManager
     private lateinit var webView: WebView
+    private lateinit var swipeRefresh: SwipeRefreshLayout
     private lateinit var progressBar: ProgressBar
     private lateinit var errorText: TextView
+    private lateinit var offlinePanel: LinearLayout
+    private lateinit var retryButton: MaterialButton
     private var tokenInjected = false
     private var isLoggingOut = false
+    private var isOnline = true
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
     private var pendingFileChooserIntent: Intent? = null
+    private var pendingAcceptsImagesOnly = false
+    private var cameraPhotoUri: Uri? = null
+    private var connectivityManager: ConnectivityManager? = null
+
+    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) {
+            runOnUiThread { updateOnlineState(true) }
+        }
+
+        override fun onLost(network: Network) {
+            runOnUiThread { updateOnlineState(hasNetworkConnection()) }
+        }
+    }
 
     private val filePermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
-            openPendingFileChooser()
+            showFileSourceDialog()
         } else {
             Toast.makeText(this, R.string.file_permission_denied, Toast.LENGTH_SHORT).show()
+            cancelFileChooser()
+        }
+    }
+
+    private val cameraPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            launchCameraCapture()
+        } else {
+            Toast.makeText(this, R.string.camera_permission_denied, Toast.LENGTH_SHORT).show()
             cancelFileChooser()
         }
     }
@@ -71,16 +121,62 @@ class AdminWebActivity : AppCompatActivity() {
         callback.onReceiveValue(uris)
     }
 
+    private val takePictureLauncher = registerForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { success ->
+        val callback = filePathCallback
+        filePathCallback = null
+
+        if (callback == null) return@registerForActivityResult
+
+        if (success && cameraPhotoUri != null) {
+            callback.onReceiveValue(arrayOf(cameraPhotoUri!!))
+        } else {
+            callback.onReceiveValue(null)
+        }
+        cameraPhotoUri = null
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_admin_web)
 
         sessionManager = SessionManager(this)
+        swipeRefresh = findViewById(R.id.swipeRefresh)
         webView = findViewById(R.id.webView)
         progressBar = findViewById(R.id.progressBar)
         errorText = findViewById(R.id.errorText)
+        offlinePanel = findViewById(R.id.offlinePanel)
+        retryButton = findViewById(R.id.retryButton)
 
+        applyWebViewDarkTheme()
+        setupWebView()
+        setupSwipeRefresh()
+        setupNetworkMonitor()
+        setupRetryButton()
+        scheduleLeadChecks()
+        loadAdminIfReady()
+    }
+
+    private fun applyWebViewDarkTheme() {
+        val nightMode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+        val isDark = nightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            webView.settings.isAlgorithmicDarkeningAllowed = isDark
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            @Suppress("DEPRECATION")
+            webView.settings.forceDark = if (isDark) {
+                WebSettings.FORCE_DARK_ON
+            } else {
+                WebSettings.FORCE_DARK_OFF
+            }
+        }
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private fun setupWebView() {
         webView.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
@@ -108,12 +204,27 @@ class AdminWebActivity : AppCompatActivity() {
             }
 
             override fun onPageFinished(view: WebView, url: String?) {
+                swipeRefresh.isRefreshing = false
                 progressBar.visibility = View.GONE
                 if (url != null && isLoginUrl(Uri.parse(url))) {
                     handleNativeLogout()
                     return
                 }
                 injectTokenIfNeeded()
+            }
+
+            override fun onReceivedError(
+                view: WebView,
+                request: WebResourceRequest,
+                error: android.webkit.WebResourceError
+            ) {
+                if (request.isForMainFrame) {
+                    swipeRefresh.isRefreshing = false
+                    progressBar.visibility = View.GONE
+                    if (!hasNetworkConnection()) {
+                        updateOnlineState(false)
+                    }
+                }
             }
         }
 
@@ -129,11 +240,11 @@ class AdminWebActivity : AppCompatActivity() {
                 val acceptTypes = fileChooserParams?.acceptTypes
                     ?.filter { it.isNotBlank() }
                     ?.takeIf { it.isNotEmpty() }
-                val acceptsImagesOnly = acceptTypes?.all { it.startsWith("image/") || it == "image/*" } == true
+                pendingAcceptsImagesOnly = acceptTypes?.all { it.startsWith("image/") || it == "image/*" } == true
 
                 pendingFileChooserIntent = when {
                     fileChooserParams != null -> fileChooserParams.createIntent()
-                    acceptsImagesOnly -> Intent(Intent.ACTION_GET_CONTENT).apply {
+                    pendingAcceptsImagesOnly -> Intent(Intent.ACTION_GET_CONTENT).apply {
                         type = "image/*"
                         addCategory(Intent.CATEGORY_OPENABLE)
                     }
@@ -145,14 +256,59 @@ class AdminWebActivity : AppCompatActivity() {
                 }
 
                 if (hasMediaPermission()) {
-                    openPendingFileChooser()
+                    showFileSourceDialog()
                 } else {
                     filePermissionLauncher.launch(requiredMediaPermission())
                 }
                 return true
             }
         }
+    }
 
+    private fun setupSwipeRefresh() {
+        swipeRefresh.setColorSchemeResources(R.color.accent_yellow)
+        swipeRefresh.setOnRefreshListener {
+            if (!hasNetworkConnection()) {
+                swipeRefresh.isRefreshing = false
+                updateOnlineState(false)
+                return@setOnRefreshListener
+            }
+            webView.reload()
+        }
+    }
+
+    private fun setupNetworkMonitor() {
+        connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        updateOnlineState(hasNetworkConnection())
+
+        val request = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
+        connectivityManager?.registerNetworkCallback(request, networkCallback)
+    }
+
+    private fun setupRetryButton() {
+        retryButton.setOnClickListener {
+            if (hasNetworkConnection()) {
+                updateOnlineState(true)
+                loadAdminIfReady(forceReload = true)
+            } else {
+                Toast.makeText(this, R.string.offline_title, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun scheduleLeadChecks() {
+        LeadNotificationScheduler.schedule(this)
+        lifecycleScope.launch {
+            while (isActive) {
+                LeadChecker.checkAndNotify(this@AdminWebActivity)
+                delay(60_000)
+            }
+        }
+    }
+
+    private fun loadAdminIfReady(forceReload: Boolean = false) {
         lifecycleScope.launch {
             val token = sessionManager.getToken()
             if (token.isNullOrBlank()) {
@@ -161,9 +317,44 @@ class AdminWebActivity : AppCompatActivity() {
                 errorText.text = getString(R.string.login_failed)
                 return@launch
             }
-            tokenInjected = false
-            webView.loadUrl(BuildConfig.ADMIN_URL)
+
+            if (!hasNetworkConnection()) {
+                progressBar.visibility = View.GONE
+                updateOnlineState(false)
+                return@launch
+            }
+
+            errorText.visibility = View.GONE
+            offlinePanel.visibility = View.GONE
+            webView.visibility = View.VISIBLE
+
+            if (forceReload || webView.url.isNullOrBlank()) {
+                tokenInjected = false
+                progressBar.visibility = View.VISIBLE
+                webView.loadUrl(BuildConfig.ADMIN_URL)
+            }
         }
+    }
+
+    private fun updateOnlineState(online: Boolean) {
+        isOnline = online
+        if (online) {
+            offlinePanel.visibility = View.GONE
+            webView.visibility = View.VISIBLE
+        } else {
+            swipeRefresh.isRefreshing = false
+            progressBar.visibility = View.GONE
+            offlinePanel.visibility = View.VISIBLE
+            webView.visibility = View.GONE
+        }
+    }
+
+    private fun hasNetworkConnection(): Boolean {
+        val manager = connectivityManager ?: return true
+        val network = manager.activeNetwork ?: return false
+        val capabilities = manager.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
 
     private fun requiredMediaPermission(): String {
@@ -179,7 +370,29 @@ class AdminWebActivity : AppCompatActivity() {
             android.content.pm.PackageManager.PERMISSION_GRANTED
     }
 
-    private fun openPendingFileChooser() {
+    private fun hasCameraPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun showFileSourceDialog() {
+        if (pendingAcceptsImagesOnly) {
+            AlertDialog.Builder(this)
+                .setTitle(R.string.file_chooser_title)
+                .setItems(arrayOf(getString(R.string.file_chooser_gallery), getString(R.string.file_chooser_camera))) { _, which ->
+                    when (which) {
+                        0 -> openGalleryChooser()
+                        1 -> requestCameraCapture()
+                    }
+                }
+                .setOnCancelListener { cancelFileChooser() }
+                .show()
+        } else {
+            openGalleryChooser()
+        }
+    }
+
+    private fun openGalleryChooser() {
         val intent = pendingFileChooserIntent ?: Intent(Intent.ACTION_GET_CONTENT).apply {
             type = "image/*"
             addCategory(Intent.CATEGORY_OPENABLE)
@@ -196,10 +409,31 @@ class AdminWebActivity : AppCompatActivity() {
         }
     }
 
+    private fun requestCameraCapture() {
+        if (hasCameraPermission()) {
+            launchCameraCapture()
+        } else {
+            cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+        }
+    }
+
+    private fun launchCameraCapture() {
+        val photosDir = File(cacheDir, "photos").apply { mkdirs() }
+        val photoFile = File(photosDir, "capture_${System.currentTimeMillis()}.jpg")
+        val uri = FileProvider.getUriForFile(
+            this,
+            "${BuildConfig.APPLICATION_ID}.fileprovider",
+            photoFile
+        )
+        cameraPhotoUri = uri
+        takePictureLauncher.launch(uri)
+    }
+
     private fun cancelFileChooser() {
         filePathCallback?.onReceiveValue(null)
         filePathCallback = null
         pendingFileChooserIntent = null
+        cameraPhotoUri = null
     }
 
     private fun isLoginUrl(uri: Uri): Boolean {
@@ -226,6 +460,50 @@ class AdminWebActivity : AppCompatActivity() {
         finish()
     }
 
+    private fun handleSwitchAccount() {
+        cancelFileChooser()
+        sessionManager.clearSession()
+        sessionManager.clearRememberedAccount()
+        CookieManager.getInstance().removeAllCookies(null)
+        CookieManager.getInstance().flush()
+        webView.stopLoading()
+
+        startActivity(Intent(this, AccountPickerActivity::class.java))
+        finish()
+    }
+
+    private fun showSavedFeedback() {
+        webView.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+        vibrateSuccess()
+        playSuccessTone()
+        Toast.makeText(this, R.string.saved_toast, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun vibrateSuccess() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vibrator = (getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
+            vibrator.vibrate(VibrationEffect.createOneShot(40, VibrationEffect.DEFAULT_AMPLITUDE))
+        } else {
+            @Suppress("DEPRECATION")
+            val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator.vibrate(VibrationEffect.createOneShot(40, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator.vibrate(40)
+            }
+        }
+    }
+
+    private fun playSuccessTone() {
+        try {
+            val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80)
+            tone.startTone(ToneGenerator.TONE_PROP_ACK, 120)
+            tone.release()
+        } catch (_: Exception) {
+        }
+    }
+
     private fun injectTokenIfNeeded() {
         if (tokenInjected) return
         val token = sessionManager.getToken() ?: return
@@ -245,6 +523,11 @@ class AdminWebActivity : AppCompatActivity() {
         }
     }
 
+    override fun onDestroy() {
+        connectivityManager?.unregisterNetworkCallback(networkCallback)
+        super.onDestroy()
+    }
+
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         if (filePathCallback != null) {
@@ -262,6 +545,16 @@ class AdminWebActivity : AppCompatActivity() {
         @JavascriptInterface
         fun onLogout() {
             runOnUiThread { handleNativeLogout() }
+        }
+
+        @JavascriptInterface
+        fun onSwitchAccount() {
+            runOnUiThread { handleSwitchAccount() }
+        }
+
+        @JavascriptInterface
+        fun onSaved() {
+            runOnUiThread { showSavedFeedback() }
         }
     }
 

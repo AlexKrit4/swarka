@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ImageUpload } from "@/components/ImageUpload";
 import { getSettings, updateSettings, type SiteSettings } from "@/lib/api";
+import { notifySaved } from "@/lib/mobile-bridge";
 
 function SettingsContent() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
@@ -20,6 +21,7 @@ function SettingsContent() {
     await updateSettings(settings);
     setSaving(false);
     setSaved(true);
+    notifySaved();
     setTimeout(() => setSaved(false), 2000);
   };
 

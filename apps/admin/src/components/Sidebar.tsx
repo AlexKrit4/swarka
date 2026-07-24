@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout } from "@/lib/api";
 import { useAdminUser } from "@/components/AdminUserContext";
+import { isMobileApp, switchAccount } from "@/lib/mobile-bridge";
 
 const NAV = [
   { href: "/", label: "Дашборд" },
@@ -28,6 +29,7 @@ export function Sidebar({ mobile = false, onClose }: SidebarProps) {
   const user = useAdminUser();
   const isSuper = user?.role === "SUPER_ADMIN";
   const isViewer = user?.role === "VIEWER";
+  const mobileApp = isMobileApp();
 
   const handleLogout = async () => {
     await logout();
@@ -39,6 +41,11 @@ export function Sidebar({ mobile = false, onClose }: SidebarProps) {
       return;
     }
     window.location.href = "/login";
+  };
+
+  const handleSwitchAccount = () => {
+    if (mobile) onClose?.();
+    switchAccount();
   };
 
   const items = isSuper
@@ -107,10 +114,20 @@ export function Sidebar({ mobile = false, onClose }: SidebarProps) {
         ))}
       </nav>
 
+      {mobileApp && (
+        <button
+          type="button"
+          onClick={handleSwitchAccount}
+          className="mt-4 text-sm text-gray-400 hover:text-white text-left px-3 py-3"
+        >
+          Сменить аккаунт
+        </button>
+      )}
+
       <button
         type="button"
         onClick={handleLogout}
-        className="mt-4 text-sm text-gray-400 hover:text-white text-left px-3 py-3"
+        className="mt-2 text-sm text-gray-400 hover:text-white text-left px-3 py-3"
       >
         Выйти
       </button>

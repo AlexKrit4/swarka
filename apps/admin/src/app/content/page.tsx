@@ -15,6 +15,7 @@ import {
   VisibilityToggles,
 } from "@/components/ContentEditors";
 import { getSettings, updateSettings } from "@/lib/api";
+import { notifySaved } from "@/lib/mobile-bridge";
 
 function ContentPageInner() {
   const [content, setContent] = useState<SiteContent>(DEFAULT_SITE_CONTENT);
@@ -43,6 +44,7 @@ function ContentPageInner() {
     });
     setSaving(false);
     setSaved(true);
+    notifySaved();
     setTimeout(() => setSaved(false), 2000);
   };
 

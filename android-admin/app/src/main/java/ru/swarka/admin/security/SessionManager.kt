@@ -43,6 +43,41 @@ class SessionManager(context: Context) {
             .apply()
     }
 
+    fun getRememberedUserId(): String? = prefs.getString(KEY_REMEMBER_USER_ID, null)
+
+    fun getRememberedEmail(): String? = prefs.getString(KEY_REMEMBER_EMAIL, null)
+
+    fun setRememberedAccount(userId: String, email: String) {
+        prefs.edit()
+            .putString(KEY_REMEMBER_USER_ID, userId)
+            .putString(KEY_REMEMBER_EMAIL, email)
+            .apply()
+    }
+
+    fun clearRememberedAccount() {
+        prefs.edit()
+            .remove(KEY_REMEMBER_USER_ID)
+            .remove(KEY_REMEMBER_EMAIL)
+            .apply()
+    }
+
+    fun hasValidSessionForRememberedAccount(): Boolean {
+        val rememberedId = getRememberedUserId() ?: return false
+        val token = getToken()
+        return !token.isNullOrBlank() && getActiveUserId() == rememberedId
+    }
+
+    suspend fun restoreRememberedSession(): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            if (hasValidSessionForRememberedAccount()) return@runCatching
+
+            val userId = getRememberedUserId() ?: error("no remembered account")
+            val email = getRememberedEmail() ?: error("no remembered email")
+            val password = getSavedPassword(userId) ?: error("no saved password")
+            login(email, password).getOrThrow()
+        }
+    }
+
     fun getSavedPassword(userId: String): String? = prefs.getString(credKey(userId), null)
 
     fun savePassword(userId: String, password: String) {
@@ -144,5 +179,7 @@ class SessionManager(context: Context) {
         private const val KEY_TOKEN = "jwt_token"
         private const val KEY_USER_ID = "active_user_id"
         private const val KEY_USER_EMAIL = "active_user_email"
+        private const val KEY_REMEMBER_USER_ID = "remember_user_id"
+        private const val KEY_REMEMBER_EMAIL = "remember_email"
     }
 }

@@ -5,6 +5,7 @@ import { parseWhyUs, type WhyUsItem } from "@swarka/shared";
 import { AuthGuard } from "@/components/AuthGuard";
 import { TextField } from "@/components/ContentEditors";
 import { getSettings, updateSettings } from "@/lib/api";
+import { notifySaved } from "@/lib/mobile-bridge";
 
 const ICON_OPTIONS = [
   { value: "factory", label: "01 — Цех" },
@@ -37,6 +38,7 @@ function WhyUsPageInner() {
     await updateSettings({ whyUsJson: JSON.stringify(items) });
     setSaving(false);
     setSaved(true);
+    notifySaved();
     setTimeout(() => setSaved(false), 2000);
   };
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { getReviews, createReview, updateReview, deleteReview, type Review } from "@/lib/api";
+import { notifySaved } from "@/lib/mobile-bridge";
 
 function ReviewsContent() {
   const [items, setItems] = useState<Review[]>([]);
@@ -26,6 +27,7 @@ function ReviewsContent() {
     }
     setEditing(null);
     load();
+    notifySaved();
   };
 
   return (

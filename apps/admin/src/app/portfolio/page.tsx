@@ -10,6 +10,7 @@ import {
   deletePortfolio,
   type PortfolioItem,
 } from "@/lib/api";
+import { notifySaved } from "@/lib/mobile-bridge";
 
 function PortfolioContent() {
   const [items, setItems] = useState<PortfolioItem[]>([]);
@@ -34,6 +35,7 @@ function PortfolioContent() {
     }
     setEditing(null);
     load();
+    notifySaved();
   };
 
   return (

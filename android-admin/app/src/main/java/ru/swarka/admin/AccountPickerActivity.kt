@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.launch
+import ru.swarka.admin.notifications.LeadNotificationScheduler
 import ru.swarka.admin.security.SessionManager
 
 class AccountPickerActivity : AppCompatActivity() {
@@ -138,7 +139,15 @@ class AccountPickerActivity : AppCompatActivity() {
             result.onSuccess {
                 if (userId != null) {
                     sessionManager.savePassword(userId, password)
+                    sessionManager.setRememberedAccount(userId, email)
+                } else {
+                    val activeId = sessionManager.getActiveUserId()
+                    val activeEmail = sessionManager.getActiveUserEmail()
+                    if (activeId != null && activeEmail != null) {
+                        sessionManager.setRememberedAccount(activeId, activeEmail)
+                    }
                 }
+                LeadNotificationScheduler.schedule(this@AccountPickerActivity)
                 startActivity(Intent(this@AccountPickerActivity, AdminWebActivity::class.java))
                 finish()
             }.onFailure {

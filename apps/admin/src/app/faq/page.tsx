@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { getFaq, createFaq, updateFaq, deleteFaq, type FaqItem } from "@/lib/api";
+import { notifySaved } from "@/lib/mobile-bridge";
 
 function FaqContent() {
   const [items, setItems] = useState<FaqItem[]>([]);
@@ -25,6 +26,7 @@ function FaqContent() {
     }
     setEditing(null);
     load();
+    notifySaved();
   };
 
   return (

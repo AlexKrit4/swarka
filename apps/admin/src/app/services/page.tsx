@@ -10,6 +10,7 @@ import {
   deleteService,
   type Service,
 } from "@/lib/api";
+import { notifySaved } from "@/lib/mobile-bridge";
 
 function formatPrice(priceFrom: number | null | undefined) {
   if (priceFrom == null) return "Договорная";
@@ -59,6 +60,7 @@ function ServicesContent() {
     }
     setEditing(null);
     load();
+    notifySaved();
   };
 
   const handleDelete = async (id: string) => {

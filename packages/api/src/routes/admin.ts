@@ -442,6 +442,26 @@ export async function adminRoutes(app: FastifyInstance) {
     return { success: true };
   });
 
+  app.get("/api/mobile/leads/check", { preHandler: requireAuth }, async (request) => {
+    const { since } = request.query as { since?: string };
+    const sinceDate = since ? new Date(since) : null;
+    const leads = await prisma.lead.findMany({
+      where: sinceDate && !Number.isNaN(sinceDate.getTime())
+        ? { createdAt: { gt: sinceDate } }
+        : undefined,
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        serviceType: true,
+        createdAt: true,
+      },
+    });
+    return { leads };
+  });
+
   // Versions & audit log
   app.get("/api/admin/changelog", { preHandler: requireAuth }, async () => {
     return prisma.changeLog.findMany({

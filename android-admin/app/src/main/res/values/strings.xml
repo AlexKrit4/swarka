@@ -37,4 +37,17 @@
     <string name="update_downloading">Загрузка… %1$d%%</string>
     <string name="update_download_failed">Не удалось скачать обновление</string>
     <string name="update_install_permission_denied">Разрешите установку приложений для обновления</string>
+    <string name="offline_title">Нет сети</string>
+    <string name="offline_message">Проверьте подключение к интернету и попробуйте снова</string>
+    <string name="offline_retry">Повторить</string>
+    <string name="saved_toast">Сохранено ✓</string>
+    <string name="file_chooser_gallery">Галерея</string>
+    <string name="file_chooser_camera">Сделать фото</string>
+    <string name="camera_permission_denied">Нужен доступ к камере для съёмки</string>
+    <string name="switch_account">Сменить аккаунт</string>
+    <string name="notification_channel_leads">Новые заявки</string>
+    <string name="notification_channel_leads_desc">Уведомления о новых заявках с сайта</string>
+    <string name="notification_new_lead">Новая заявка: %1$s</string>
+    <string name="notification_permission_title">Уведомления о заявках</string>
+    <string name="notification_permission_message">Разрешите уведомления, чтобы получать новые заявки с сайта</string>
 </resources>

@@ -11,8 +11,8 @@ android {
         applicationId = "ru.swarka.admin"
         minSdk = 26
         targetSdk = 35
-        versionCode = 10
-        versionName = "1.1.7"
+        versionCode = 11
+        versionName = "1.2.0"
 
         buildConfigField("String", "ADMIN_URL", "\"https://admin.swarka-i-voditel.ru\"")
         buildConfigField("String", "API_URL", "\"https://api.swarka-i-voditel.ru\"")
@@ -68,4 +68,6 @@ dependencies {
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
 }

@@ -11,6 +11,7 @@ import {
   type ChangeLogItem,
   type SiteSnapshotItem,
 } from "@/lib/api";
+import { notifySaved } from "@/lib/mobile-bridge";
 
 function VersionsContent() {
   const [changelog, setChangelog] = useState<ChangeLogItem[]>([]);
@@ -35,6 +36,7 @@ function VersionsContent() {
     setBusyId("new-snapshot");
     await createSnapshot("Ручной снимок перед правками");
     setMessage("Снимок сохранён");
+    notifySaved();
     await load();
     setBusyId(null);
     setTimeout(() => setMessage(null), 2000);
@@ -45,6 +47,7 @@ function VersionsContent() {
     try {
       await restoreChangelog(id);
       setMessage("Изменение откачено");
+      notifySaved();
       await load();
     } catch {
       setMessage("Не удалось откатить");
@@ -58,6 +61,7 @@ function VersionsContent() {
     try {
       await restoreSnapshot(id);
       setMessage("Сайт восстановлен из снимка");
+      notifySaved();
       await load();
     } catch {
       setMessage("Не удалось восстановить снимок");

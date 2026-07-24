@@ -10,6 +10,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.launch
+import ru.swarka.admin.notifications.LeadNotificationScheduler
+import ru.swarka.admin.security.SessionManager
 import ru.swarka.admin.update.ApkDownloader
 import ru.swarka.admin.update.ApkInstaller
 import ru.swarka.admin.update.AppVersionInfo
@@ -143,6 +145,27 @@ class UpdateGateActivity : AppCompatActivity() {
 
     private fun continueToApp() {
         val freshSetup = intent.getBooleanExtra(EXTRA_FRESH_SETUP, false)
+        if (freshSetup) {
+            openAccountPicker(freshSetup = true)
+            return
+        }
+
+        lifecycleScope.launch {
+            val sessionManager = SessionManager(this@UpdateGateActivity)
+            if (sessionManager.getRememberedUserId() != null) {
+                val restored = sessionManager.restoreRememberedSession()
+                if (restored.isSuccess) {
+                    LeadNotificationScheduler.schedule(this@UpdateGateActivity)
+                    startActivity(Intent(this@UpdateGateActivity, AdminWebActivity::class.java))
+                    finish()
+                    return@launch
+                }
+            }
+            openAccountPicker(freshSetup = false)
+        }
+    }
+
+    private fun openAccountPicker(freshSetup: Boolean) {
         startActivity(
             Intent(this, AccountPickerActivity::class.java).apply {
                 putExtra(AccountPickerActivity.EXTRA_FRESH_SETUP, freshSetup)
