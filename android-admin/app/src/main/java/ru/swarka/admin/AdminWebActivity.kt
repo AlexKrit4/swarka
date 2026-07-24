@@ -1,9 +1,12 @@
 package ru.swarka.admin
 
 import android.annotation.SuppressLint
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.webkit.CookieManager
+import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -20,6 +23,7 @@ class AdminWebActivity : AppCompatActivity() {
     private lateinit var progressBar: ProgressBar
     private lateinit var errorText: TextView
     private var tokenInjected = false
+    private var isLoggingOut = false
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -44,15 +48,24 @@ class AdminWebActivity : AppCompatActivity() {
         CookieManager.getInstance().setAcceptCookie(true)
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true)
 
+        webView.addJavascriptInterface(AndroidBridge(), JS_BRIDGE_NAME)
+
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                if (isLoginUrl(request.url)) {
+                    handleNativeLogout()
+                    return true
+                }
                 val host = request.url.host.orEmpty()
-                val allowed = host.endsWith("swarka-i-voditel.ru")
-                return !allowed
+                return !host.endsWith("swarka-i-voditel.ru")
             }
 
             override fun onPageFinished(view: WebView, url: String?) {
                 progressBar.visibility = View.GONE
+                if (url != null && isLoginUrl(Uri.parse(url))) {
+                    handleNativeLogout()
+                    return
+                }
                 injectTokenIfNeeded()
             }
         }
@@ -68,6 +81,29 @@ class AdminWebActivity : AppCompatActivity() {
             tokenInjected = false
             webView.loadUrl(BuildConfig.ADMIN_URL)
         }
+    }
+
+    private fun isLoginUrl(uri: Uri): Boolean {
+        val path = uri.path.orEmpty()
+        return path == "/login" || path.startsWith("/login/")
+    }
+
+    private fun handleNativeLogout() {
+        if (isLoggingOut) return
+        isLoggingOut = true
+
+        sessionManager.clearSession()
+        CookieManager.getInstance().removeAllCookies(null)
+        CookieManager.getInstance().flush()
+        webView.stopLoading()
+        webView.clearHistory()
+        webView.clearCache(true)
+
+        val intent = Intent(this, PinUnlockActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        startActivity(intent)
+        finish()
     }
 
     private fun injectTokenIfNeeded() {
@@ -96,5 +132,16 @@ class AdminWebActivity : AppCompatActivity() {
         } else {
             moveTaskToBack(true)
         }
+    }
+
+    private inner class AndroidBridge {
+        @JavascriptInterface
+        fun onLogout() {
+            runOnUiThread { handleNativeLogout() }
+        }
+    }
+
+    companion object {
+        const val JS_BRIDGE_NAME = "SwarkaAdmin"
     }
 }

@@ -32,6 +32,11 @@ export function Sidebar({ mobile = false, onClose }: SidebarProps) {
     await logout();
     const { clearToken } = await import("@/lib/auth");
     clearToken();
+    const bridge = (window as unknown as { SwarkaAdmin?: { onLogout?: () => void } }).SwarkaAdmin;
+    if (bridge?.onLogout) {
+      bridge.onLogout();
+      return;
+    }
     window.location.href = "/login";
   };
 
