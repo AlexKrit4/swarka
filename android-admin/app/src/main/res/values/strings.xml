@@ -21,6 +21,9 @@
     <string name="account_picker_empty">Подадмины не найдены</string>
     <string name="account_picker_error">Не удалось загрузить список аккаунтов</string>
     <string name="password_hint">Пароль</string>
+    <string name="email_hint">Email или телефон</string>
     <string name="enter_password_for_account">Введите пароль для выбранного аккаунта</string>
     <string name="login_button">Войти</string>
+    <string name="retry_accounts">Повторить загрузку аккаунтов</string>
+    <string name="manual_login_hint">Список аккаунтов временно недоступен. Войдите вручную:</string>
 </resources>
