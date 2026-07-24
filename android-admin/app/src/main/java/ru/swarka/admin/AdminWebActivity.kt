@@ -67,6 +67,7 @@ class AdminWebActivity : AppCompatActivity() {
     private var pendingAcceptsImagesOnly = false
     private var cameraPhotoUri: Uri? = null
     private var connectivityManager: ConnectivityManager? = null
+    private var pageScrollY = 0
 
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) {
@@ -213,6 +214,7 @@ class AdminWebActivity : AppCompatActivity() {
             builtInZoomControls = true
             displayZoomControls = false
         }
+        webView.isNestedScrollingEnabled = true
 
         CookieManager.getInstance().setAcceptCookie(true)
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true)
@@ -232,6 +234,8 @@ class AdminWebActivity : AppCompatActivity() {
             override fun onPageFinished(view: WebView, url: String?) {
                 swipeRefresh.isRefreshing = false
                 progressBar.visibility = View.GONE
+                pageScrollY = 0
+                installScrollTracking()
                 if (url != null && isLoginUrl(Uri.parse(url))) {
                     handleNativeLogout()
                     return
@@ -293,7 +297,14 @@ class AdminWebActivity : AppCompatActivity() {
 
     private fun setupSwipeRefresh() {
         swipeRefresh.setColorSchemeResources(R.color.accent_yellow)
+        swipeRefresh.setOnChildScrollUpCallback { _, _ ->
+            pageScrollY > 0
+        }
         swipeRefresh.setOnRefreshListener {
+            if (pageScrollY > 0) {
+                swipeRefresh.isRefreshing = false
+                return@setOnRefreshListener
+            }
             if (!hasNetworkConnection()) {
                 swipeRefresh.isRefreshing = false
                 updateOnlineState(false)
@@ -301,6 +312,37 @@ class AdminWebActivity : AppCompatActivity() {
             }
             webView.reload()
         }
+    }
+
+    private fun installScrollTracking() {
+        webView.evaluateJavascript(
+            """
+            (function() {
+              function getScrollY() {
+                var y = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+                var mains = document.querySelectorAll('main');
+                for (var i = 0; i < mains.length; i++) {
+                  y = Math.max(y, mains[i].scrollTop || 0);
+                }
+                return Math.round(y);
+              }
+              function report() {
+                if (window.SwarkaAdmin && window.SwarkaAdmin.onPageScroll) {
+                  window.SwarkaAdmin.onPageScroll(getScrollY());
+                }
+              }
+              if (window.__swarkaScrollHook) {
+                report();
+                return;
+              }
+              window.__swarkaScrollHook = true;
+              window.addEventListener('scroll', report, { passive: true });
+              document.addEventListener('scroll', report, { passive: true, capture: true });
+              report();
+            })();
+            """.trimIndent(),
+            null
+        )
     }
 
     private fun setupNetworkMonitor() {
@@ -650,6 +692,11 @@ class AdminWebActivity : AppCompatActivity() {
         @JavascriptInterface
         fun clearLeadBadge() {
             runOnUiThread { LeadBadgeManager.clear(this@AdminWebActivity) }
+        }
+
+        @JavascriptInterface
+        fun onPageScroll(scrollY: Int) {
+            runOnUiThread { pageScrollY = scrollY.coerceAtLeast(0) }
         }
     }
 

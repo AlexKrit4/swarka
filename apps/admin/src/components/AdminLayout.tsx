@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { useAdminUser, useCanEdit } from "@/components/AdminUserContext";
 import { getRoleLabel } from "@/lib/permissions";
+import { reportMobilePageScroll } from "@/lib/mobile-bridge";
 
 function ReadOnlyBanner() {
   const user = useAdminUser();
@@ -32,12 +33,33 @@ function MainContent({ children }: { children: React.ReactNode }) {
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const user = useAdminUser();
+  const desktopMainRef = useRef<HTMLElement>(null);
+  const mobileMainRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const mains = [desktopMainRef.current, mobileMainRef.current].filter(
+      (el): el is HTMLElement => el != null
+    );
+    if (mains.length === 0) return;
+
+    const reportScroll = () => {
+      const scrollY = Math.max(...mains.map((el) => el.scrollTop));
+      reportMobilePageScroll(scrollY);
+    };
+
+    mains.forEach((el) => el.addEventListener("scroll", reportScroll, { passive: true }));
+    reportScroll();
+
+    return () => {
+      mains.forEach((el) => el.removeEventListener("scroll", reportScroll));
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="hidden md:flex min-h-screen">
         <Sidebar />
-        <main className="flex-1 p-6 lg:p-8 overflow-auto min-w-0">
+        <main ref={desktopMainRef} className="flex-1 p-6 lg:p-8 overflow-auto min-w-0">
           <MainContent>{children}</MainContent>
         </main>
       </div>
@@ -62,7 +84,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 p-4 overflow-auto min-w-0 w-full">
+        <main ref={mobileMainRef} className="flex-1 p-4 overflow-auto min-w-0 w-full">
           <MainContent>{children}</MainContent>
         </main>
       </div>
