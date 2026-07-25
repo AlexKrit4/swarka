@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AuthGuard } from "@/components/AuthGuard";
-import { getDashboard, type Lead } from "@/lib/api";
+import { getDashboard, type Lead, type BillingStatus } from "@/lib/api";
 
 function DashboardContent() {
   const [data, setData] = useState<{
@@ -20,6 +20,7 @@ function DashboardContent() {
       newVisitorsToday: number;
       newVisitorsWeek: number;
     };
+    billing: BillingStatus;
   } | null>(null);
 
   useEffect(() => {
@@ -39,6 +40,19 @@ function DashboardContent() {
         <h1 className="text-2xl font-bold">Дашборд</h1>
         <Link href="/analytics" className="text-sm text-gray-500 hover:text-black">
           Подробная статистика →
+        </Link>
+      </div>
+
+      <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Сервер</h2>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <Link href="/billing" className="card hover:border-[#F7E018] transition-colors">
+          <p className="text-sm text-gray-500">Клиентский сайт</p>
+          <p className={`text-2xl font-bold mt-1 ${data.billing.isSiteEnabled ? "text-green-700" : "text-red-700"}`}>
+            {data.billing.isSiteEnabled ? "Работает" : "Отключён"}
+          </p>
+          <p className="text-sm text-gray-500 mt-2">
+            Баланс: {data.billing.balanceRub} ₽ · {data.billing.daysRemaining} дн.
+          </p>
         </Link>
       </div>
 

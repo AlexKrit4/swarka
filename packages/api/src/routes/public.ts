@@ -6,6 +6,8 @@ import { sendTelegramNotification } from "../lib/telegram.js";
 import { sendLeadPushNotification } from "../lib/fcm.js";
 import { recordSiteVisit } from "../lib/analytics.js";
 import { getMobileAppVersionInfo } from "../lib/mobile-app.js";
+import { getBillingStatus } from "../lib/billing.js";
+import { assertPublicSiteAvailable } from "../lib/site-gate.js";
 import { z } from "zod";
 
 const leadSchema = z.object({
@@ -26,7 +28,16 @@ const trackSchema = z.object({
 });
 
 export async function publicRoutes(app: FastifyInstance) {
+  app.addHook("preHandler", async (request, reply) => {
+    await assertPublicSiteAvailable(request, reply);
+  });
+
   app.get("/api/health", async () => ({ status: "ok" }));
+
+  app.get("/api/billing/site-status", async () => {
+    const status = await getBillingStatus();
+    return { isSiteEnabled: status.isSiteEnabled };
+  });
 
   app.get("/api/mobile/accounts", async () => {
     return prisma.user.findMany({

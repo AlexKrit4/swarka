@@ -169,3 +169,56 @@ model SiteVisit {
   @@index([path])
   @@index([isBot, createdAt])
 }
+
+model HostingBalance {
+  id                String    @id @default("singleton")
+  balanceRub        Int       @default(0)
+  dailyRateRub      Int       @default(22)
+  manualSiteEnabled Boolean   @default(true)
+  lastDailyChargeAt DateTime?
+  updatedAt         DateTime  @updatedAt
+}
+
+enum HostingPaymentStatus {
+  PENDING
+  SUCCEEDED
+  CANCELED
+  FAILED
+}
+
+model HostingPayment {
+  id              String               @id @default(cuid())
+  amountRub       Int
+  status          HostingPaymentStatus @default(PENDING)
+  provider        String               @default("yookassa")
+  externalId      String?              @unique
+  createdByUserId String?
+  createdByEmail  String?
+  paidAt          DateTime?
+  metadata        String?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum HostingLedgerType {
+  PAYMENT
+  DAILY_CHARGE
+  MANUAL_ADJUSTMENT
+}
+
+model HostingLedger {
+  id           String            @id @default(cuid())
+  type         HostingLedgerType
+  amountRub    Int
+  balanceAfter Int
+  description  String
+  paymentId    String?
+  userId       String?
+  userEmail    String?
+  createdAt    DateTime          @default(now())
+
+  @@index([createdAt])
+}

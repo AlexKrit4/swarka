@@ -11,6 +11,7 @@ import {
   restoreSiteSnapshot,
 } from "../lib/audit.js";
 import { getAnalyticsSummary, getDashboardAnalytics } from "../lib/analytics.js";
+import { getBillingStatus } from "../lib/billing.js";
 import { z } from "zod";
 
 const pushRegisterSchema = z.object({
@@ -166,7 +167,7 @@ export async function adminRoutes(app: FastifyInstance) {
     const weekStart = new Date(todayStart);
     weekStart.setDate(weekStart.getDate() - 7);
 
-    const [todayCount, weekCount, recentLeads, totalServices, totalPortfolio, analytics] =
+    const [todayCount, weekCount, recentLeads, totalServices, totalPortfolio, analytics, billing] =
       await Promise.all([
         prisma.lead.count({ where: { createdAt: { gte: todayStart } } }),
         prisma.lead.count({ where: { createdAt: { gte: weekStart } } }),
@@ -174,9 +175,10 @@ export async function adminRoutes(app: FastifyInstance) {
         prisma.service.count(),
         prisma.portfolioItem.count(),
         getDashboardAnalytics(),
+        getBillingStatus(),
       ]);
 
-    return { todayCount, weekCount, recentLeads, totalServices, totalPortfolio, analytics };
+    return { todayCount, weekCount, recentLeads, totalServices, totalPortfolio, analytics, billing };
   });
 
   app.get("/api/admin/analytics", { preHandler: requireAuth }, async (request) => {

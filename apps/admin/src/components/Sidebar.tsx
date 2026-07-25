@@ -15,6 +15,7 @@ const NAV = [
   { href: "/why-us", label: "Преимущества" },
   { href: "/versions", label: "Версии и логи" },
   { href: "/settings", label: "Настройки" },
+  { href: "/billing", label: "Оплата" },
   { href: "/faq", label: "FAQ" },
   { href: "/reviews", label: "Отзывы" },
   { href: "/leads", label: "Заявки" },

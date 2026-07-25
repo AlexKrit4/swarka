@@ -120,6 +120,7 @@ export async function getDashboard() {
       newVisitorsToday: number;
       newVisitorsWeek: number;
     };
+    billing: BillingStatus;
   }>("/api/admin/dashboard");
 }
 
@@ -402,4 +403,80 @@ export async function uploadFile(file: File): Promise<{ url: string }> {
 
   if (!res.ok) throw new Error("Upload failed");
   return res.json();
+}
+
+export interface BillingStatus {
+  balanceRub: number;
+  dailyRateRub: number;
+  daysRemaining: number;
+  isSiteEnabled: boolean;
+  manualSiteEnabled: boolean;
+  paidUntil: string | null;
+  monthlyEstimateRub: number;
+  minTopupRub: number;
+  lowBalanceWarning: boolean;
+  yookassaConfigured?: boolean;
+}
+
+export interface BillingLedgerItem {
+  id: string;
+  type: "PAYMENT" | "DAILY_CHARGE" | "MANUAL_ADJUSTMENT";
+  amountRub: number;
+  balanceAfter: number;
+  description: string;
+  createdAt: string;
+  userEmail: string | null;
+}
+
+export interface BillingPaymentItem {
+  id: string;
+  amountRub: number;
+  status: "PENDING" | "SUCCEEDED" | "CANCELED" | "FAILED";
+  createdAt: string;
+  paidAt: string | null;
+  createdByEmail: string | null;
+}
+
+export async function getBillingStatus() {
+  return apiFetch<BillingStatus>("/api/admin/billing/status");
+}
+
+export async function getBillingHistory() {
+  return apiFetch<{
+    ledger: BillingLedgerItem[];
+    payments: BillingPaymentItem[];
+  }>("/api/admin/billing/history");
+}
+
+export async function createBillingPayment(amountRub: number) {
+  return apiFetch<{ paymentId: string; confirmationUrl: string }>(
+    "/api/admin/billing/create-payment",
+    {
+      method: "POST",
+      body: JSON.stringify({ amountRub }),
+    }
+  );
+}
+
+export async function syncBillingPayment(id: string) {
+  return apiFetch<BillingStatus>(`/api/admin/billing/sync-payment/${id}`, {
+    method: "POST",
+  });
+}
+
+export async function manualBillingAdjust(amountRub: number, description: string) {
+  return apiFetch<BillingStatus>("/api/admin/billing/manual-adjust", {
+    method: "POST",
+    body: JSON.stringify({ amountRub, description }),
+  });
+}
+
+export async function updateBillingSettings(data: {
+  dailyRateRub?: number;
+  manualSiteEnabled?: boolean;
+}) {
+  return apiFetch<BillingStatus>("/api/admin/billing/settings", {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
 }
