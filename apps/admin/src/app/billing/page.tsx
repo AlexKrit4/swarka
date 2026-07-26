@@ -13,6 +13,7 @@ import {
   type BillingLedgerItem,
   type BillingStatus,
 } from "@/lib/api";
+import { isMobileApp, openExternalUrl } from "@/lib/mobile-bridge";
 
 const PRESETS = [
   { label: "100 ₽", amount: 100 },
@@ -81,7 +82,12 @@ function BillingContentInner() {
     setMessage(null);
     try {
       const result = await createBillingPayment(amountRub);
-      window.location.href = result.confirmationUrl;
+      if (isMobileApp()) {
+        openExternalUrl(result.confirmationUrl);
+        setPaying(false);
+      } else {
+        window.location.href = result.confirmationUrl;
+      }
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Не удалось создать платёж");
       setPaying(false);

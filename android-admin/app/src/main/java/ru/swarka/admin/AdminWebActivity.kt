@@ -228,7 +228,10 @@ class AdminWebActivity : AppCompatActivity() {
                     return true
                 }
                 val host = request.url.host.orEmpty()
-                return !host.endsWith("swarka-i-voditel.ru")
+                if (host.endsWith("swarka-i-voditel.ru")) {
+                    return false
+                }
+                return openExternalUrl(request.url)
             }
 
             override fun onPageFinished(view: WebView, url: String?) {
@@ -614,10 +617,16 @@ class AdminWebActivity : AppCompatActivity() {
             builder.append("?text=")
             builder.append(Uri.encode(text))
         }
-        try {
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(builder.toString())))
+        openExternalUrl(Uri.parse(builder.toString()))
+    }
+
+    private fun openExternalUrl(uri: Uri): Boolean {
+        return try {
+            startActivity(Intent(Intent.ACTION_VIEW, uri))
+            true
         } catch (_: ActivityNotFoundException) {
-            Toast.makeText(this, R.string.file_chooser_unavailable, Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.browser_unavailable, Toast.LENGTH_SHORT).show()
+            false
         }
     }
 
@@ -686,6 +695,15 @@ class AdminWebActivity : AppCompatActivity() {
         fun openWhatsApp(phone: String?, text: String?) {
             runOnUiThread {
                 if (phone != null) launchWhatsApp(phone, text)
+            }
+        }
+
+        @JavascriptInterface
+        fun openExternalUrl(url: String?) {
+            runOnUiThread {
+                val value = url?.trim().orEmpty()
+                if (value.isBlank()) return@runOnUiThread
+                openExternalUrl(Uri.parse(value))
             }
         }
 

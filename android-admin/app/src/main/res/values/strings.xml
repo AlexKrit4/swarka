@@ -29,6 +29,7 @@
     <string name="file_chooser_title">Выберите файл</string>
     <string name="file_permission_denied">Нужен доступ к галерее для выбора файлов</string>
     <string name="file_chooser_unavailable">На устройстве нет приложения для выбора файлов</string>
+    <string name="browser_unavailable">Не удалось открыть страницу оплаты</string>
     <string name="app_version_label">Версия %1$s</string>
     <string name="update_available_title">Доступна новая версия!</string>
     <string name="update_available_subtitle">Версия %1$s готова к установке</string>
