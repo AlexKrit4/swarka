@@ -176,15 +176,15 @@ function BillingContentInner() {
       </div>
 
       <div className="card">
-        <h2 className="font-semibold text-lg mb-2">Пополнение через СБП</h2>
+        <h2 className="font-semibold text-lg mb-2">Пополнение через ЮMoney</h2>
         <p className="text-sm text-gray-600 mb-4">
-          Минимальное пополнение — {status.minTopupRub} ₽. Платёж обрабатывается через ЮKassa.
-          После оплаты сайт включается автоматически.
+          Минимальное пополнение — {status.minTopupRub} ₽. Откроется страница ЮMoney — можно
+          оплатить с кошелька или банковской карты. После оплаты баланс обновится автоматически.
         </p>
 
-        {!status.yookassaConfigured && (
+        {!status.paymentConfigured && !status.yoomoneyConfigured && (
           <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            ЮKassa ещё не настроена на сервере. Попросите администратора добавить ключи оплаты.
+            ЮMoney ещё не настроена на сервере. Попросите администратора добавить ключи оплаты.
           </div>
         )}
 
@@ -194,7 +194,7 @@ function BillingContentInner() {
               key={preset.amount}
               type="button"
               className="btn-primary"
-              disabled={!canPay || paying || !status.yookassaConfigured}
+              disabled={!canPay || paying || !(status.paymentConfigured ?? status.yoomoneyConfigured)}
               onClick={() => handlePay(preset.amount)}
             >
               {preset.label}
@@ -218,10 +218,10 @@ function BillingContentInner() {
           <button
             type="button"
             className="btn-primary"
-            disabled={!canPay || paying || !status.yookassaConfigured}
+            disabled={!canPay || paying || !(status.paymentConfigured ?? status.yoomoneyConfigured)}
             onClick={handleCustomPay}
           >
-            {paying ? "Переход к оплате..." : "Оплатить через СБП"}
+            {paying ? "Переход к оплате..." : "Оплатить через ЮMoney"}
           </button>
         </div>
       </div>

@@ -4,6 +4,7 @@ import { getBillingStatus } from "./billing.js";
 const PUBLIC_ALLOWLIST = new Set([
   "/api/health",
   "/api/billing/site-status",
+  "/api/billing/yoomoney-webhook",
   "/api/billing/webhook",
   "/api/mobile/accounts",
   "/api/mobile/app-version",

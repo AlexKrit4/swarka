@@ -10,7 +10,14 @@ import {
   MIN_TOPUP_RUB,
   updateBillingSettings,
 } from "../lib/billing.js";
-import { createYooKassaPayment, fetchYooKassaPayment, isYooKassaConfigured } from "../lib/yookassa.js";
+import {
+  buildYooMoneyPaymentUrl,
+  isSuccessfulYooMoneyNotification,
+  isYooMoneyConfigured,
+  parseRubAmount,
+  parseYooMoneyNotification,
+  verifyYooMoneyNotification,
+} from "../lib/yoomoney.js";
 import { requireAuth, requireEditor, requireSuperAdmin } from "../plugins/auth.js";
 import { z } from "zod";
 
@@ -34,49 +41,72 @@ function adminReturnUrl(status: "success" | "pending") {
 }
 
 export async function billingRoutes(app: FastifyInstance) {
-  app.post("/api/billing/webhook", async (request, reply) => {
-    const body = request.body as {
-      event?: string;
-      object?: {
-        id?: string;
-        status?: string;
-        paid?: boolean;
-        metadata?: { internalPaymentId?: string };
-      };
-    };
+  app.addContentTypeParser(
+    "application/x-www-form-urlencoded",
+    { parseAs: "string" },
+    (_req, body, done) => {
+      try {
+        const params = new URLSearchParams(body as string);
+        const parsed: Record<string, string> = {};
+        params.forEach((value, key) => {
+          parsed[key] = value;
+        });
+        done(null, parsed);
+      } catch (error) {
+        done(error as Error, undefined);
+      }
+    }
+  );
 
-    const paymentObject = body.object;
-    if (!paymentObject?.id) {
-      return reply.status(400).send({ error: "Invalid webhook" });
+  app.post("/api/billing/yoomoney-webhook", async (request, reply) => {
+    const secret = process.env.YOOMONEY_NOTIFICATION_SECRET?.trim();
+    if (!secret) {
+      return reply.status(503).send("not configured");
     }
 
-    const remote = await fetchYooKassaPayment(paymentObject.id);
-    if (!remote) {
-      return reply.status(502).send({ error: "Unable to verify payment" });
+    const params = parseYooMoneyNotification(request.body);
+    if (!params || !verifyYooMoneyNotification(params, secret)) {
+      return reply.status(403).send("invalid signature");
     }
 
-    const internalPaymentId = remote.metadata?.internalPaymentId;
-    if (!internalPaymentId) {
-      return reply.status(400).send({ error: "Missing internal payment id" });
+    if (!isSuccessfulYooMoneyNotification(params)) {
+      return reply.status(200).send("ignored");
     }
 
-    if (remote.status === "succeeded" || remote.paid) {
-      await applySuccessfulPayment(internalPaymentId, remote.id);
-    } else if (remote.status === "canceled") {
-      await prisma.hostingPayment.updateMany({
-        where: { id: internalPaymentId, status: HostingPaymentStatus.PENDING },
-        data: { status: HostingPaymentStatus.CANCELED, externalId: remote.id },
-      });
+    const paymentId = params.label?.trim();
+    const operationId = params.operation_id?.trim();
+    if (!paymentId || !operationId) {
+      return reply.status(200).send("missing label");
     }
 
-    return { success: true };
+    const paidAmount = parseRubAmount(params.withdraw_amount || params.amount);
+    const payment = await prisma.hostingPayment.findUnique({ where: { id: paymentId } });
+    if (!payment) {
+      return reply.status(200).send("unknown payment");
+    }
+
+    if (payment.status === HostingPaymentStatus.SUCCEEDED) {
+      return reply.status(200).send("already applied");
+    }
+
+    if (paidAmount === null || paidAmount < payment.amountRub) {
+      request.log.warn(
+        { paymentId, paidAmount, expected: payment.amountRub },
+        "YooMoney amount mismatch"
+      );
+      return reply.status(200).send("amount mismatch");
+    }
+
+    await applySuccessfulPayment(paymentId, operationId);
+    return reply.status(200).send("OK");
   });
 
   app.get("/api/admin/billing/status", { preHandler: requireAuth }, async () => {
     const status = await getBillingStatus();
     return {
       ...status,
-      yookassaConfigured: isYooKassaConfigured(),
+      paymentConfigured: isYooMoneyConfigured(),
+      yoomoneyConfigured: isYooMoneyConfigured(),
     };
   });
 
@@ -97,24 +127,20 @@ export async function billingRoutes(app: FastifyInstance) {
       amountRub: parsed.data.amountRub,
       userId: user.id,
       userEmail: user.email,
+      provider: "yoomoney",
     });
 
     try {
-      const yookassa = await createYooKassaPayment({
+      const confirmationUrl = buildYooMoneyPaymentUrl({
         amountRub: payment.amountRub,
         paymentId: payment.id,
         description: "Оплата работы сервера SWARKA",
-        returnUrl: adminReturnUrl("success"),
-      });
-
-      await prisma.hostingPayment.update({
-        where: { id: payment.id },
-        data: { externalId: yookassa.externalId },
+        successUrl: adminReturnUrl("success"),
       });
 
       return {
         paymentId: payment.id,
-        confirmationUrl: yookassa.confirmationUrl,
+        confirmationUrl,
       };
     } catch (err) {
       await prisma.hostingPayment.update({
@@ -124,25 +150,6 @@ export async function billingRoutes(app: FastifyInstance) {
       const message = err instanceof Error ? err.message : "Payment creation failed";
       return reply.status(502).send({ error: message });
     }
-  });
-
-  app.post("/api/admin/billing/sync-payment/:id", { preHandler: requireAuth }, async (request, reply) => {
-    const { id } = request.params as { id: string };
-    const payment = await prisma.hostingPayment.findUnique({ where: { id } });
-    if (!payment?.externalId) {
-      return reply.status(404).send({ error: "Payment not found" });
-    }
-
-    const remote = await fetchYooKassaPayment(payment.externalId);
-    if (!remote) {
-      return reply.status(502).send({ error: "Unable to fetch payment status" });
-    }
-
-    if (remote.status === "succeeded" || remote.paid) {
-      await applySuccessfulPayment(payment.id, remote.id);
-    }
-
-    return getBillingStatus();
   });
 
   app.post("/api/admin/billing/manual-adjust", { preHandler: requireSuperAdmin }, async (request, reply) => {

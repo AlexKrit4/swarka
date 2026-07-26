@@ -99,7 +99,10 @@ export async function applySuccessfulPayment(paymentId: string, externalId: stri
         type: HostingLedgerType.PAYMENT,
         amountRub: payment.amountRub,
         balanceAfter: updatedBalance.balanceRub,
-        description: "Пополнение через СБП (ЮKassa)",
+        description:
+          payment.provider === "yoomoney"
+            ? "Пополнение через ЮMoney"
+            : "Пополнение через СБП (ЮKassa)",
         paymentId: payment.id,
         userId: payment.createdByUserId ?? undefined,
         userEmail: payment.createdByEmail ?? undefined,
@@ -116,6 +119,7 @@ export async function createPendingPayment(input: {
   amountRub: number;
   userId: string;
   userEmail: string;
+  provider?: string;
 }) {
   if (input.amountRub < MIN_TOPUP_RUB) {
     throw new Error(`Минимальное пополнение — ${MIN_TOPUP_RUB} ₽`);
@@ -125,6 +129,7 @@ export async function createPendingPayment(input: {
     data: {
       amountRub: input.amountRub,
       status: HostingPaymentStatus.PENDING,
+      provider: input.provider ?? "yoomoney",
       createdByUserId: input.userId,
       createdByEmail: input.userEmail,
     },

@@ -416,6 +416,8 @@ export interface BillingStatus {
   minTopupRub: number;
   lowBalanceWarning: boolean;
   yookassaConfigured?: boolean;
+  yoomoneyConfigured?: boolean;
+  paymentConfigured?: boolean;
 }
 
 export interface BillingLedgerItem {
