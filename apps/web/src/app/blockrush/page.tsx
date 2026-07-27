@@ -142,7 +142,7 @@ export default function BlockRushDownloadPage() {
                 Скачать APK · 47 МБ
               </a>
               <span className="text-center text-xs leading-5 text-[#81776e] sm:text-left">
-                Android 5.0+
+                Android 7.0+
                 <br />
                 Установка напрямую
               </span>
