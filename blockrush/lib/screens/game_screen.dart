@@ -34,7 +34,7 @@ class _GameScreenState extends State<GameScreen> {
   Timer? _snapTimer;
   SharedPreferences? _preferences;
   int _bestScore = 0;
-  int _snapRadius = 2;
+  int _snapRadius = 3;
   int? _hoverRow;
   int? _hoverCol;
   int? _targetRow;
@@ -139,17 +139,17 @@ class _GameScreenState extends State<GameScreen> {
     final startedAt = DateTime.now();
     setState(() {
       _draggedPiece = index;
-      _snapRadius = 2;
+      _snapRadius = 3;
     });
     _snapTimer = Timer.periodic(const Duration(milliseconds: 140), (_) {
       if (!mounted || _draggedPiece == null) return;
       final heldFor = DateTime.now().difference(startedAt).inMilliseconds;
       final nextRadius = heldFor < 300
-          ? 2
-          : heldFor < 650
           ? 3
-          : heldFor < 1050
+          : heldFor < 650
           ? 4
+          : heldFor < 1050
+          ? 6
           : boardSize * 2;
       if (nextRadius != _snapRadius) {
         setState(() {
@@ -190,7 +190,7 @@ class _GameScreenState extends State<GameScreen> {
       _hoverCol = null;
       _targetRow = null;
       _targetCol = null;
-      _snapRadius = 2;
+      _snapRadius = 3;
     });
   }
 
@@ -898,7 +898,15 @@ class _GameBoard extends StatelessWidget {
                       ? null
                       : GridPoint(hoverRow!, hoverCol!),
                 );
-                if (origin == null) return false;
+                if (origin == null) {
+                  return engine.previewPlacement(
+                        piece,
+                        row,
+                        col,
+                        radius: boardSize * 2,
+                      ) !=
+                      null;
+                }
                 onHover(origin.row, origin.col, row, col);
                 return true;
               },
