@@ -6,9 +6,13 @@ import ru.swarka.admin.security.SessionManager
 
 class SwarkaFirebaseMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
-        val data = message.data
-        if (data["type"] != "new_lead") return
+        when (message.data["type"]) {
+            "new_lead" -> handleNewLead(message.data)
+            "billing_topup" -> handleBillingTopUp(message.data)
+        }
+    }
 
+    private fun handleNewLead(data: Map<String, String>) {
         val leadId = data["leadId"] ?: return
         val name = data["name"] ?: "Клиент"
         val phone = data["phone"] ?: return
@@ -22,8 +26,30 @@ class SwarkaFirebaseMessagingService : FirebaseMessagingService() {
             leadId = leadId
         )
 
-        val prefs = LeadCheckPrefs(applicationContext)
-        prefs.addKnownLeadIds(listOf(leadId))
+        LeadCheckPrefs(applicationContext).addKnownLeadIds(listOf(leadId))
+    }
+
+    private fun handleBillingTopUp(data: Map<String, String>) {
+        val amountRub = data["amountRub"]?.toIntOrNull() ?: return
+        val daysRemaining = data["daysRemaining"]?.toIntOrNull() ?: return
+        val paidUntil = data["paidUntil"]?.ifBlank { null }
+        val isSiteEnabled = data["isSiteEnabled"] == "1"
+
+        BillingNotificationHelper.showTopUpNotification(
+            context = applicationContext,
+            amountRub = amountRub,
+            daysRemaining = daysRemaining,
+            paidUntil = paidUntil,
+            isSiteEnabled = isSiteEnabled
+        )
+
+        BillingTopUpUiNotifier.deliver(
+            context = applicationContext,
+            amountRub = amountRub,
+            daysRemaining = daysRemaining,
+            paidUntil = paidUntil,
+            isSiteEnabled = isSiteEnabled
+        )
     }
 
     override fun onNewToken(token: String) {

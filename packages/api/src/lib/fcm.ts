@@ -7,36 +7,17 @@ export interface LeadPushPayload {
   serviceType?: string | null;
 }
 
-async function getAdminPushTokens(): Promise<string[]> {
-  const adminUsers = await prisma.user.findMany({
-    where: { role: { in: ["SUPER_ADMIN", "ADMIN", "VIEWER"] } },
-    select: { id: true },
-  });
-
-  if (adminUsers.length === 0) return [];
-
-  const rows = await prisma.pushToken.findMany({
-    where: { userId: { in: adminUsers.map((user) => user.id) } },
-    select: { token: true },
-  });
-
-  return rows.map((row) => row.token);
+export interface BillingTopUpPushPayload {
+  amountRub: number;
+  balanceRub: number;
+  daysRemaining: number;
+  paidUntil: string | null;
+  isSiteEnabled: boolean;
 }
 
-export async function sendLeadPushNotification(lead: LeadPushPayload): Promise<void> {
+async function sendFcmData(tokens: string[], data: Record<string, string>) {
   const serverKey = process.env.FCM_SERVER_KEY;
-  if (!serverKey) return;
-
-  const tokens = await getAdminPushTokens();
-  if (tokens.length === 0) return;
-
-  const data = {
-    type: "new_lead",
-    leadId: lead.id,
-    name: lead.name,
-    phone: lead.phone,
-    serviceType: lead.serviceType ?? "",
-  };
+  if (!serverKey || tokens.length === 0) return;
 
   const chunkSize = 500;
   for (let i = 0; i < tokens.length; i += chunkSize) {
@@ -62,4 +43,56 @@ export async function sendLeadPushNotification(lead: LeadPushPayload): Promise<v
       console.error("FCM send error:", error);
     }
   }
+}
+
+async function getAdminPushTokens(): Promise<string[]> {
+  const adminUsers = await prisma.user.findMany({
+    where: { role: { in: ["SUPER_ADMIN", "ADMIN", "VIEWER"] } },
+    select: { id: true },
+  });
+
+  if (adminUsers.length === 0) return [];
+
+  const rows = await prisma.pushToken.findMany({
+    where: { userId: { in: adminUsers.map((user) => user.id) } },
+    select: { token: true },
+  });
+
+  return rows.map((row) => row.token);
+}
+
+async function getUserPushTokens(userId: string): Promise<string[]> {
+  const rows = await prisma.pushToken.findMany({
+    where: { userId },
+    select: { token: true },
+  });
+  return rows.map((row) => row.token);
+}
+
+export async function sendLeadPushNotification(lead: LeadPushPayload): Promise<void> {
+  const tokens = await getAdminPushTokens();
+  await sendFcmData(tokens, {
+    type: "new_lead",
+    leadId: lead.id,
+    name: lead.name,
+    phone: lead.phone,
+    serviceType: lead.serviceType ?? "",
+  });
+}
+
+export async function sendBillingTopUpPushNotification(
+  userId: string | null | undefined,
+  payload: BillingTopUpPushPayload
+): Promise<void> {
+  if (!userId) return;
+
+  const tokens = await getUserPushTokens(userId);
+  await sendFcmData(tokens, {
+    type: "billing_topup",
+    amountRub: String(payload.amountRub),
+    balanceRub: String(payload.balanceRub),
+    daysRemaining: String(payload.daysRemaining),
+    paidUntil: payload.paidUntil ?? "",
+    isSiteEnabled: payload.isSiteEnabled ? "1" : "0",
+  });
 }

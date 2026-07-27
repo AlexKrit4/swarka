@@ -42,6 +42,7 @@ import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import ru.swarka.admin.notifications.BillingTopUpUiNotifier
 import ru.swarka.admin.notifications.FcmRegistrar
 import ru.swarka.admin.notifications.LeadBadgeManager
 import ru.swarka.admin.notifications.LeadChecker
@@ -183,7 +184,27 @@ class AdminWebActivity : AppCompatActivity() {
         val leadId = intent?.getStringExtra(EXTRA_LEAD_ID)
         if (!leadId.isNullOrBlank()) {
             pendingDeepLinkPath = "/leads?lead=$leadId"
+            return
         }
+        if (intent?.getBooleanExtra(EXTRA_OPEN_BILLING, false) == true) {
+            pendingDeepLinkPath = "/billing"
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        BillingTopUpUiNotifier.attachWebView(webView)
+        pendingDeepLinkPath?.let {
+            if (tokenInjected) {
+                navigateToPath(it)
+                pendingDeepLinkPath = null
+            }
+        }
+    }
+
+    override fun onPause() {
+        BillingTopUpUiNotifier.detachWebView(webView)
+        super.onPause()
     }
 
     private fun applyWebViewDarkTheme() {
@@ -721,11 +742,19 @@ class AdminWebActivity : AppCompatActivity() {
     companion object {
         const val JS_BRIDGE_NAME = "SwarkaAdmin"
         const val EXTRA_LEAD_ID = "lead_id"
+        const val EXTRA_OPEN_BILLING = "open_billing"
 
         fun createLeadIntent(context: Context, leadId: String): Intent {
             return Intent(context, AdminWebActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
                 putExtra(EXTRA_LEAD_ID, leadId)
+            }
+        }
+
+        fun createBillingIntent(context: Context): Intent {
+            return Intent(context, AdminWebActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra(EXTRA_OPEN_BILLING, true)
             }
         }
     }

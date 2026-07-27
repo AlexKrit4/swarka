@@ -18,6 +18,7 @@ import {
   parseYooMoneyNotification,
   verifyYooMoneyNotification,
 } from "../lib/yoomoney.js";
+import { sendBillingTopUpPushNotification } from "../lib/fcm.js";
 import { requireAuth, requireEditor, requireSuperAdmin } from "../plugins/auth.js";
 import { z } from "zod";
 
@@ -97,7 +98,18 @@ export async function billingRoutes(app: FastifyInstance) {
       return reply.status(200).send("amount mismatch");
     }
 
-    await applySuccessfulPayment(paymentId, operationId);
+    const result = await applySuccessfulPayment(paymentId, operationId);
+    if (result.applied && result.payment?.createdByUserId) {
+      const status = await getBillingStatus();
+      await sendBillingTopUpPushNotification(result.payment.createdByUserId, {
+        amountRub: result.payment.amountRub,
+        balanceRub: status.balanceRub,
+        daysRemaining: status.daysRemaining,
+        paidUntil: status.paidUntil,
+        isSiteEnabled: status.isSiteEnabled,
+      });
+    }
+
     return reply.status(200).send("OK");
   });
 

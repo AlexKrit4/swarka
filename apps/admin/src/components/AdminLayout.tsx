@@ -6,6 +6,7 @@ import { useAdminUser, useCanEdit } from "@/components/AdminUserContext";
 import { getRoleLabel } from "@/lib/permissions";
 import { reportMobilePageScroll } from "@/lib/mobile-bridge";
 import { BillingBanner } from "@/components/BillingBanner";
+import { BillingTopUpBanner } from "@/components/BillingTopUpBanner";
 
 function ReadOnlyBanner() {
   const user = useAdminUser();
@@ -23,6 +24,7 @@ function MainContent({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      <BillingTopUpBanner />
       <BillingBanner />
       <ReadOnlyBanner />
       <fieldset disabled={!canEdit} className="contents min-w-0">

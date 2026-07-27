@@ -48,6 +48,14 @@
     <string name="switch_account">Сменить аккаунт</string>
     <string name="notification_channel_leads">Новые заявки</string>
     <string name="notification_channel_leads_desc">Уведомления о новых заявках с сайта</string>
+    <string name="notification_channel_billing">Оплата сервера</string>
+    <string name="notification_channel_billing_desc">Уведомления о пополнении баланса сервера</string>
+    <string name="notification_billing_topup_title">Баланс пополнен ✓</string>
+    <string name="notification_billing_topup_days">хватит на %1$d дн.</string>
+    <string name="notification_billing_topup_body_amount_days">+%1$d ₽ · %2$s</string>
+    <string name="notification_billing_topup_body_full">+%1$d ₽ · %2$s\nСайт работает до %3$s</string>
+    <string name="billing_topup_toast_short">Баланс пополнен: +%1$d ₽ · %2$s</string>
+    <string name="billing_topup_toast_full">Баланс пополнен: +%1$d ₽ · %2$s до %3$s</string>
     <string name="notification_new_lead">Новая заявка: %1$s</string>
     <string name="notification_permission_title">Уведомления о заявках</string>
     <string name="notification_permission_message">Разрешите уведомления, чтобы получать новые заявки с сайта</string>
