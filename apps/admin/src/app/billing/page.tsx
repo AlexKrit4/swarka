@@ -87,6 +87,7 @@ function BillingContentInner() {
   const [selectedLedgerIds, setSelectedLedgerIds] = useState<string[]>([]);
   const [removingLedger, setRemovingLedger] = useState(false);
   const [selectingTariffId, setSelectingTariffId] = useState<string | null>(null);
+  const [tariffModalOpen, setTariffModalOpen] = useState(false);
   const [tariffForm, setTariffForm] = useState(EMPTY_TARIFF_FORM);
   const [editingTariffId, setEditingTariffId] = useState<string | null>(null);
   const [savingTariff, setSavingTariff] = useState(false);
@@ -176,6 +177,7 @@ function BillingContentInner() {
     try {
       await selectBillingTariff(tariffId);
       await reload();
+      setTariffModalOpen(false);
       setMessage("Тариф выбран. Новая плата начнёт списываться с 00:05.");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Не удалось сменить тариф");
@@ -342,24 +344,42 @@ function BillingContentInner() {
                 : "Недостаточно средств — пополните баланс"}
             </p>
           </div>
-          <div className="text-right">
-            <p className="text-sm text-gray-500">
-              {currentTariff ? `Тариф «${currentTariff.name}»` : "Тариф"}
+          <div className="text-right min-w-[180px]">
+            <p className="text-sm text-gray-500 mb-1">Текущий тариф</p>
+            <p className="text-xl font-bold">
+              {currentTariff ? `«${currentTariff.name}»` : "Не выбран"}
             </p>
-            <p className="text-3xl font-black">
+            <p className="text-3xl font-black mt-1">
               {status.selectedDailyRateRub ?? status.dailyRateRub} ₽
             </p>
             <p className="text-sm text-gray-500">за сутки (~{status.monthlyEstimateRub} ₽/мес)</p>
+            {currentTariff && (
+              <p className="text-xs text-gray-500 mt-2 max-w-[240px] ml-auto">
+                {tariffSpecs(currentTariff)}
+              </p>
+            )}
+            {currentTariff?.tagline && (
+              <p className="text-xs text-gray-400 mt-1 max-w-[240px] ml-auto">{currentTariff.tagline}</p>
+            )}
             {status.rateChangePending && (
-              <p className="text-xs text-amber-700 mt-2 max-w-[220px] ml-auto">
+              <p className="text-xs text-amber-700 mt-2 max-w-[240px] ml-auto">
                 Сейчас списывается {status.dailyRateRub} ₽/сутки. Новая цена — с 00:05.
               </p>
+            )}
+            {canSelectTariff && (
+              <button
+                type="button"
+                className="btn-primary mt-3"
+                onClick={() => setTariffModalOpen(true)}
+              >
+                Поменять
+              </button>
             )}
           </div>
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-3 gap-4">
+      <div className="grid sm:grid-cols-2 gap-4">
         <div className="card">
           <p className="text-sm text-gray-500">Баланс</p>
           <p className="text-3xl font-bold mt-1">{status.balanceRub} ₽</p>
@@ -368,68 +388,89 @@ function BillingContentInner() {
           <p className="text-sm text-gray-500">Хватит на</p>
           <p className="text-3xl font-bold mt-1">{status.daysRemaining} дн.</p>
         </div>
-        <div className="card">
-          <p className="text-sm text-gray-500">Конфигурация</p>
-          <p className="text-lg font-semibold mt-2">
-            {currentTariff ? tariffSpecs(currentTariff) : "Домашний ПК 24/7"}
-          </p>
-          <p className="text-sm text-gray-500 mt-1">
-            {currentTariff?.tagline || "Электричество + обслуживание"}
-          </p>
-        </div>
       </div>
 
-      <div className="card">
-        <h2 className="font-semibold text-lg mb-2">Тарифы сервера</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          Выберите конфигурацию. Новая суточная плата начнёт списываться только в{" "}
-          <strong>00:05</strong> (по Москве). До этого действует текущая цена.
-        </p>
-        <div className="grid sm:grid-cols-2 gap-4">
-          {visibleTariffs.map((tariff) => {
-            const selected = status.tariffId === tariff.id;
-            return (
-              <div
-                key={tariff.id}
-                className={`rounded-xl border p-4 ${
-                  selected ? "border-[#F7E018] bg-[#F7E018]/10" : "border-gray-200"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div>
-                    <p className="font-semibold text-lg">{tariff.name}</p>
-                    {tariff.tagline && (
-                      <p className="text-sm text-gray-600 mt-0.5">{tariff.tagline}</p>
-                    )}
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-2xl font-black">{tariff.dailyRateRub} ₽</p>
-                    <p className="text-xs text-gray-500">/сутки</p>
-                  </div>
-                </div>
-                <p className="text-sm text-gray-700 mb-1">{tariffSpecs(tariff)}</p>
-                <p className="text-xs text-gray-500 mb-4">≈ {tariff.monthlyEstimateRub} ₽/мес</p>
-                {canSelectTariff ? (
-                  <button
-                    type="button"
-                    className={selected ? "btn-secondary" : "btn-primary"}
-                    disabled={selected || selectingTariffId === tariff.id}
-                    onClick={() => handleSelectTariff(tariff.id)}
-                  >
-                    {selected
-                      ? "Текущий тариф"
-                      : selectingTariffId === tariff.id
-                        ? "Сохранение..."
-                        : "Выбрать"}
-                  </button>
-                ) : (
-                  selected && <p className="text-sm font-medium text-gray-700">Текущий тариф</p>
-                )}
+      {tariffModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4"
+          onClick={() => {
+            if (!selectingTariffId) setTariffModalOpen(false);
+          }}
+        >
+          <div
+            className="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl bg-white p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tariff-modal-title"
+          >
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <div>
+                <h2 id="tariff-modal-title" className="text-lg font-semibold">
+                  Выберите тариф
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  Новая плата начнёт списываться только в 00:05.
+                </p>
               </div>
-            );
-          })}
+              <button
+                type="button"
+                className="w-9 h-9 rounded-lg border border-gray-200 text-lg leading-none"
+                aria-label="Закрыть"
+                disabled={!!selectingTariffId}
+                onClick={() => setTariffModalOpen(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-3 mt-4">
+              {visibleTariffs.map((tariff) => {
+                const selected = status.tariffId === tariff.id;
+                return (
+                  <div
+                    key={tariff.id}
+                    className={`rounded-xl border p-4 ${
+                      selected ? "border-[#F7E018] bg-[#F7E018]/10" : "border-gray-200"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div>
+                        <p className="font-semibold text-base">{tariff.name}</p>
+                        {tariff.tagline && (
+                          <p className="text-sm text-gray-600 mt-0.5">{tariff.tagline}</p>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-xl font-black">{tariff.dailyRateRub} ₽</p>
+                        <p className="text-xs text-gray-500">/сутки</p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-700 mb-1">{tariffSpecs(tariff)}</p>
+                    <p className="text-xs text-gray-500 mb-3">≈ {tariff.monthlyEstimateRub} ₽/мес</p>
+                    <button
+                      type="button"
+                      className={
+                        selected
+                          ? "rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600"
+                          : "btn-primary"
+                      }
+                      disabled={selected || selectingTariffId === tariff.id}
+                      onClick={() => handleSelectTariff(tariff.id)}
+                    >
+                      {selected
+                        ? "Текущий тариф"
+                        : selectingTariffId === tariff.id
+                          ? "Сохранение..."
+                          : "Выбрать"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="card">
         <h2 className="font-semibold text-lg mb-2">Пополнение через ЮMoney</h2>
@@ -735,7 +776,11 @@ function BillingContentInner() {
                     : "Добавить тариф"}
               </button>
               {editingTariffId && (
-                <button type="button" className="btn-secondary" onClick={resetTariffForm}>
+                <button
+                  type="button"
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium"
+                  onClick={resetTariffForm}
+                >
                   Отмена
                 </button>
               )}
