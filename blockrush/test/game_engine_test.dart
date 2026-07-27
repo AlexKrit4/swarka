@@ -24,7 +24,7 @@ void main() {
         initialPieces: [single, single, single],
       );
 
-      final snapped = engine.relaxedPlacement(single, 3, 3);
+      final snapped = engine.previewPlacement(single, 3, 3);
 
       expect(snapped, isNotNull);
       expect(snapped, isNot(const GridPoint(3, 3)));
@@ -35,7 +35,7 @@ void main() {
       final single = piece(const [GridPoint(0, 0)]);
       final engine = GameEngine(initialPieces: [single, single, single]);
 
-      final snapped = engine.relaxedPlacement(
+      final snapped = engine.previewPlacement(
         single,
         3,
         4,
@@ -45,14 +45,14 @@ void main() {
       expect(snapped, const GridPoint(3, 3));
     });
 
-    test('allows any piece cell, not only its center, under the pointer', () {
+    test('centers preview under the pointer independently of pickup', () {
       final board = List.generate(
         boardSize,
         (_) => List<int?>.filled(boardSize, 1),
       );
-      board[2][0] = null;
-      board[2][1] = null;
-      board[2][2] = null;
+      board[2][3] = null;
+      board[2][4] = null;
+      board[2][5] = null;
       final bar = piece(const [
         GridPoint(0, 0),
         GridPoint(0, 1),
@@ -63,9 +63,9 @@ void main() {
         initialPieces: [bar, bar, bar],
       );
 
-      final snapped = engine.relaxedPlacement(bar, 2, 0);
+      final snapped = engine.previewPlacement(bar, 2, 4);
 
-      expect(snapped, const GridPoint(2, 0));
+      expect(snapped, const GridPoint(2, 3));
     });
   });
 

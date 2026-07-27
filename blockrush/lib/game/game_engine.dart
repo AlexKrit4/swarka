@@ -148,54 +148,42 @@ class GameEngine {
     return true;
   }
 
-  /// Finds a comfortable placement around the cell indicated by the player.
+  /// Finds a comfortable preview centered around the player's finger.
   ///
-  /// Any cell in the piece may land under the pointer. The nearest legal
-  /// placement wins, while a valid previous snap is retained briefly to avoid
+  /// The exact centered origin is preferred. If it is unavailable, the nearest
+  /// legal origin wins. A valid previous snap is retained briefly to avoid
   /// jitter as the finger crosses cell boundaries.
-  GridPoint? relaxedPlacement(
+  GridPoint? previewPlacement(
     GamePiece piece,
     int targetRow,
     int targetCol, {
     int radius = 2,
     GridPoint? previous,
   }) {
+    final idealRow = targetRow - piece.height ~/ 2;
+    final idealCol = targetCol - piece.width ~/ 2;
     if (previous != null && canPlace(piece, previous.row, previous.col)) {
-      final previousDistance = piece.cells
-          .map((cell) {
-            final rowDelta = previous.row + cell.row - targetRow;
-            final colDelta = previous.col + cell.col - targetCol;
-            return rowDelta * rowDelta + colDelta * colDelta;
-          })
-          .reduce(min);
-      if (previousDistance <= 1) {
+      final rowDelta = previous.row - idealRow;
+      final colDelta = previous.col - idealCol;
+      if (rowDelta * rowDelta + colDelta * colDelta <= 1) {
         return previous;
       }
     }
 
     GridPoint? best;
     var bestScore = 1 << 30;
-    for (var row = 0; row < boardSize; row++) {
-      for (var col = 0; col < boardSize; col++) {
+    for (var row = idealRow - radius; row <= idealRow + radius; row++) {
+      for (var col = idealCol - radius; col <= idealCol + radius; col++) {
         if (!canPlace(piece, row, col)) continue;
 
-        final cellDistance = piece.cells
-            .map((cell) {
-              final rowDelta = row + cell.row - targetRow;
-              final colDelta = col + cell.col - targetCol;
-              return rowDelta * rowDelta + colDelta * colDelta;
-            })
-            .reduce(min);
-        if (cellDistance > radius * radius) continue;
-
-        final centerRowDelta = 2 * targetRow - (2 * row + piece.height - 1);
-        final centerColDelta = 2 * targetCol - (2 * col + piece.width - 1);
-        final centerDistance =
-            centerRowDelta * centerRowDelta + centerColDelta * centerColDelta;
+        final rowDelta = row - idealRow;
+        final colDelta = col - idealCol;
+        final distance = rowDelta * rowDelta + colDelta * colDelta;
+        if (distance > radius * radius) continue;
         final stabilityDistance = previous == null
             ? 0
             : (previous.row - row).abs() + (previous.col - col).abs();
-        final score = cellDistance * 100 + centerDistance + stabilityDistance;
+        final score = distance * 100 + stabilityDistance;
         if (score < bestScore) {
           best = GridPoint(row, col);
           bestScore = score;

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:blockrush/game/game_engine.dart';
 import 'package:blockrush/services/game_audio.dart';
+import 'package:blockrush/services/update_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -25,6 +26,7 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> {
   GameEngine _engine = GameEngine();
   final GameAudio _audio = GameAudio();
+  final UpdateService _updates = UpdateService();
   final Set<GridPoint> _clearing = {};
   SharedPreferences? _preferences;
   int _bestScore = 0;
@@ -34,6 +36,7 @@ class _GameScreenState extends State<GameScreen> {
   int _tutorialStep = -1;
   bool _soundEnabled = true;
   bool _hapticsEnabled = true;
+  bool _checkingUpdate = false;
 
   @override
   void initState() {
@@ -53,6 +56,58 @@ class _GameScreenState extends State<GameScreen> {
         _tutorialStep = 0;
       }
     });
+    Future<void>.delayed(const Duration(seconds: 2), () {
+      if (mounted) unawaited(_checkForUpdate(silent: true));
+    });
+  }
+
+  Future<void> _checkForUpdate({required bool silent}) async {
+    if (_checkingUpdate) return;
+    _checkingUpdate = true;
+    final update = await _updates.check();
+    _checkingUpdate = false;
+    if (!mounted) return;
+    if (update == null) {
+      if (!silent) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('You already have the latest version.')),
+        );
+      }
+      return;
+    }
+
+    final install = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFFFFFAF4),
+        icon: const Icon(Icons.system_update_rounded, size: 42),
+        title: Text('Update ${update.versionName}'),
+        content: Text(
+          update.notes.isEmpty
+              ? 'A new version is ready to install.'
+              : update.notes,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('LATER'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.download_rounded),
+            label: const Text('INSTALL'),
+          ),
+        ],
+      ),
+    );
+    if ((install ?? false) && mounted) {
+      final opened = await _updates.install(update);
+      if (!opened && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open the installer.')),
+        );
+      }
+    }
   }
 
   Future<void> _place(int pieceIndex, int row, int col) async {
@@ -274,6 +329,17 @@ class _GameScreenState extends State<GameScreen> {
                   onTap: () {
                     Navigator.pop(context);
                     setState(() => _tutorialStep = 0);
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.system_update_rounded),
+                  title: const Text('Check for updates'),
+                  subtitle: const Text('Installed: 1.1.0'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () {
+                    Navigator.pop(context);
+                    unawaited(_checkForUpdate(silent: false));
                   },
                 ),
               ],
@@ -551,7 +617,7 @@ class _GameBoard extends StatelessWidget {
               onWillAcceptWithDetails: (details) {
                 final piece = engine.pieces[details.data];
                 if (piece == null) return false;
-                final origin = engine.relaxedPlacement(
+                final origin = engine.previewPlacement(
                   piece,
                   row,
                   col,
@@ -566,7 +632,7 @@ class _GameBoard extends StatelessWidget {
               onAcceptWithDetails: (details) {
                 final piece = engine.pieces[details.data];
                 if (piece == null) return;
-                final origin = engine.relaxedPlacement(
+                final origin = engine.previewPlacement(
                   piece,
                   row,
                   col,
@@ -634,7 +700,6 @@ class _PieceDock extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         const feedbackCellSize = 41.0;
-        const lift = 64.0;
         final dockCellSize = math.min(
           36.0,
           math.min(
@@ -654,22 +719,30 @@ class _PieceDock extends StatelessWidget {
         if (!enabled) return Opacity(opacity: 0.4, child: dock);
         return Draggable<int>(
           data: index,
-          dragAnchorStrategy: pointerDragAnchorStrategy,
-          feedbackOffset: const Offset(0, -lift),
+          dragAnchorStrategy: (draggable, dragContext, globalPosition) {
+            final box = dragContext.findRenderObject()! as RenderBox;
+            final local = box.globalToLocal(globalPosition);
+            final shapeWidth = piece!.width * dockCellSize;
+            final shapeHeight = piece!.height * dockCellSize;
+            final shapeLeft = (box.size.width - shapeWidth) / 2;
+            final shapeTop = (box.size.height - shapeHeight) / 2;
+            final grabbedX = (local.dx - shapeLeft)
+                .clamp(0.0, shapeWidth)
+                .toDouble();
+            final grabbedY = (local.dy - shapeTop)
+                .clamp(0.0, shapeHeight)
+                .toDouble();
+            final scale = feedbackCellSize / dockCellSize;
+            return Offset(grabbedX * scale, grabbedY * scale);
+          },
           onDragStarted: onDragStarted,
           onDragEnd: (_) => onDragEnded(),
           feedback: Material(
             color: Colors.transparent,
-            child: Transform.translate(
-              offset: Offset(
-                -piece!.width * feedbackCellSize / 2,
-                -piece!.height * feedbackCellSize / 2 - lift,
-              ),
-              child: _PieceView(
-                piece: piece!,
-                cellSize: feedbackCellSize,
-                elevated: true,
-              ),
+            child: _PieceView(
+              piece: piece!,
+              cellSize: feedbackCellSize,
+              elevated: true,
             ),
           ),
           childWhenDragging: Opacity(opacity: 0.16, child: dock),
