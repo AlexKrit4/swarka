@@ -96,3 +96,46 @@ export async function sendBillingTopUpPushNotification(
     isSiteEnabled: payload.isSiteEnabled ? "1" : "0",
   });
 }
+
+async function getSuperAdminPushTokens(): Promise<string[]> {
+  const users = await prisma.user.findMany({
+    where: { role: "SUPER_ADMIN" },
+    select: { id: true },
+  });
+  if (users.length === 0) return [];
+  const rows = await prisma.pushToken.findMany({
+    where: { userId: { in: users.map((u) => u.id) } },
+    select: { token: true },
+  });
+  return rows.map((row) => row.token);
+}
+
+export async function sendSupportMessageToAdminPush(
+  adminUserId: string,
+  payload: { threadId: string; preview: string }
+): Promise<void> {
+  const tokens = await getUserPushTokens(adminUserId);
+  await sendFcmData(tokens, {
+    type: "support_message",
+    audience: "admin",
+    threadId: payload.threadId,
+    title: "Новое сообщение от поддержки",
+    preview: payload.preview.slice(0, 180),
+  });
+}
+
+export async function sendSupportMessageToSuperAdminsPush(payload: {
+  threadId: string;
+  preview: string;
+  adminEmail: string;
+}): Promise<void> {
+  const tokens = await getSuperAdminPushTokens();
+  await sendFcmData(tokens, {
+    type: "support_message",
+    audience: "super",
+    threadId: payload.threadId,
+    title: "Новое сообщение в поддержке",
+    preview: payload.preview.slice(0, 180),
+    adminEmail: payload.adminEmail,
+  });
+}

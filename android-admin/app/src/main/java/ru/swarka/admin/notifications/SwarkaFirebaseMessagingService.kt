@@ -2,6 +2,7 @@ package ru.swarka.admin.notifications
 
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import ru.swarka.admin.R
 import ru.swarka.admin.security.SessionManager
 
 class SwarkaFirebaseMessagingService : FirebaseMessagingService() {
@@ -9,7 +10,22 @@ class SwarkaFirebaseMessagingService : FirebaseMessagingService() {
         when (message.data["type"]) {
             "new_lead" -> handleNewLead(message.data)
             "billing_topup" -> handleBillingTopUp(message.data)
+            "support_message" -> handleSupportMessage(message.data)
         }
+    }
+
+    private fun handleSupportMessage(data: Map<String, String>) {
+        val threadId = data["threadId"] ?: return
+        val title = data["title"]?.ifBlank { null }
+            ?: applicationContext.getString(R.string.notification_support_default_title)
+        val preview = data["preview"].orEmpty()
+
+        SupportNotificationHelper.showSupportMessageNotification(
+            context = applicationContext,
+            title = title,
+            preview = preview,
+            threadId = threadId
+        )
     }
 
     private fun handleNewLead(data: Map<String, String>) {

@@ -50,6 +50,10 @@
     <string name="notification_channel_leads_desc">Уведомления о новых заявках с сайта</string>
     <string name="notification_channel_billing">Оплата сервера</string>
     <string name="notification_channel_billing_desc">Уведомления о пополнении баланса сервера</string>
+    <string name="notification_channel_support">Поддержка</string>
+    <string name="notification_channel_support_desc">Сообщения чата поддержки</string>
+    <string name="notification_support_default_title">Новое сообщение от поддержки</string>
+    <string name="notification_support_default_body">Откройте чат, чтобы прочитать</string>
     <string name="notification_billing_topup_title">Баланс пополнен ✓</string>
     <string name="notification_billing_topup_days">хватит на %1$d дн.</string>
     <string name="notification_billing_topup_body_amount_days">+%1$d ₽ · %2$s</string>

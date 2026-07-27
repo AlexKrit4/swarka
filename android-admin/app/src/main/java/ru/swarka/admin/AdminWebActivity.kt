@@ -189,6 +189,10 @@ class AdminWebActivity : AppCompatActivity() {
         }
         if (intent?.getBooleanExtra(EXTRA_OPEN_BILLING, false) == true) {
             pendingDeepLinkPath = "/billing"
+            return
+        }
+        if (intent?.getBooleanExtra(EXTRA_OPEN_SUPPORT, false) == true) {
+            pendingDeepLinkPath = "/support"
         }
     }
 
@@ -755,6 +759,7 @@ class AdminWebActivity : AppCompatActivity() {
         const val JS_BRIDGE_NAME = "SwarkaAdmin"
         const val EXTRA_LEAD_ID = "lead_id"
         const val EXTRA_OPEN_BILLING = "open_billing"
+        const val EXTRA_OPEN_SUPPORT = "open_support"
 
         fun createLeadIntent(context: Context, leadId: String): Intent {
             return Intent(context, AdminWebActivity::class.java).apply {
@@ -767,6 +772,13 @@ class AdminWebActivity : AppCompatActivity() {
             return Intent(context, AdminWebActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
                 putExtra(EXTRA_OPEN_BILLING, true)
+            }
+        }
+
+        fun createSupportIntent(context: Context): Intent {
+            return Intent(context, AdminWebActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra(EXTRA_OPEN_SUPPORT, true)
             }
         }
     }

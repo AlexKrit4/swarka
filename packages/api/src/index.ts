@@ -8,6 +8,7 @@ import fastifyStatic from "@fastify/static";
 import { publicRoutes } from "./routes/public.js";
 import { adminRoutes } from "./routes/admin.js";
 import { billingRoutes } from "./routes/billing.js";
+import { supportRoutes } from "./routes/support.js";
 import { ensureUploadsDir, getUploadsDir } from "./lib/uploads.js";
 import { startBillingCron } from "./lib/billing-cron.js";
 
@@ -58,6 +59,7 @@ async function main() {
   await app.register(publicRoutes);
   await app.register(adminRoutes);
   await app.register(billingRoutes);
+  await app.register(supportRoutes);
 
   startBillingCron();
 

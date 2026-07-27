@@ -249,3 +249,35 @@ model HostingLedger {
   @@index([createdAt])
   @@index([deletedAt])
 }
+
+model SupportThread {
+  id          String   @id @default(cuid())
+  adminUserId String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  messages SupportMessage[]
+
+  @@index([updatedAt])
+}
+
+model SupportMessage {
+  id               String    @id @default(cuid())
+  threadId         String
+  senderUserId     String
+  senderEmail      String
+  senderName       String?
+  senderRole       String
+  body             String    @default("")
+  attachmentUrl    String?
+  attachmentName   String?
+  attachmentMime   String?
+  createdAt        DateTime  @default(now())
+  readByAdminAt    DateTime?
+  readBySupportAt  DateTime?
+
+  thread SupportThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
+  @@index([senderUserId])
+}

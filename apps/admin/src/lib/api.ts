@@ -561,3 +561,127 @@ export async function deleteBillingTariff(id: string) {
     method: "DELETE",
   });
 }
+
+export interface SupportMessage {
+  id: string;
+  threadId: string;
+  senderUserId: string;
+  senderEmail: string;
+  senderName: string | null;
+  senderRole: string;
+  body: string;
+  attachmentUrl: string | null;
+  attachmentName: string | null;
+  attachmentMime: string | null;
+  createdAt: string;
+  readByAdminAt: string | null;
+  readBySupportAt: string | null;
+}
+
+export interface SupportThreadSummary {
+  adminUserId: string;
+  adminEmail: string;
+  adminName: string | null;
+  threadId: string | null;
+  updatedAt: string | null;
+  unreadCount: number;
+  lastMessage: {
+    body: string;
+    attachmentName: string | null;
+    createdAt: string;
+    senderRole: string;
+  } | null;
+}
+
+export async function getSupportUnreadCount() {
+  return apiFetch<{ unreadCount: number }>("/api/admin/support/unread-count");
+}
+
+export async function getMySupportThread() {
+  return apiFetch<{
+    thread: { id: string; adminUserId: string; updatedAt: string };
+    messages: SupportMessage[];
+  }>("/api/admin/support/my-thread");
+}
+
+export async function getSupportThreads() {
+  return apiFetch<{ threads: SupportThreadSummary[] }>("/api/admin/support/threads");
+}
+
+export async function getSupportThread(id: string) {
+  return apiFetch<{
+    thread: {
+      id: string;
+      adminUserId: string;
+      adminEmail: string;
+      adminName: string | null;
+      updatedAt: string;
+    };
+    messages: SupportMessage[];
+  }>(`/api/admin/support/threads/${id}`);
+}
+
+export async function openSupportThread(adminUserId: string) {
+  return apiFetch<{
+    thread: {
+      id: string;
+      adminUserId: string;
+      adminEmail: string;
+      adminName: string | null;
+      updatedAt: string;
+    };
+    messages: SupportMessage[];
+  }>("/api/admin/support/threads/open", {
+    method: "POST",
+    body: JSON.stringify({ adminUserId }),
+  });
+}
+
+export async function sendSupportMessage(data: {
+  body?: string;
+  threadId?: string;
+  adminUserId?: string;
+  attachmentUrl?: string | null;
+  attachmentName?: string | null;
+  attachmentMime?: string | null;
+}) {
+  return apiFetch<{
+    message: SupportMessage;
+    threadId: string;
+    adminUserId: string;
+  }>("/api/admin/support/messages", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function markSupportThreadRead(threadId: string) {
+  return apiFetch<{ success: boolean }>(`/api/admin/support/threads/${threadId}/read`, {
+    method: "POST",
+  });
+}
+
+export async function uploadSupportFile(file: File): Promise<{
+  url: string;
+  name: string;
+  mime: string;
+}> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const { getToken } = await import("./auth");
+  const token = getToken();
+
+  const res = await fetch(`${API_URL}/api/admin/support/upload`, {
+    method: "POST",
+    credentials: "include",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || "Ошибка загрузки");
+  }
+  return res.json();
+}

@@ -9,7 +9,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import ru.swarka.admin.notifications.BillingNotificationHelper
 import ru.swarka.admin.notifications.LeadNotificationHelper
+import ru.swarka.admin.notifications.SupportNotificationHelper
 import ru.swarka.admin.security.PinManager
 
 class MainActivity : AppCompatActivity() {
@@ -20,6 +22,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         LeadNotificationHelper.ensureChannel(this)
+        BillingNotificationHelper.ensureChannel(this)
+        SupportNotificationHelper.ensureChannel(this)
 
         if (needsNotificationPermission() && !hasNotificationPermission()) {
             AlertDialog.Builder(this)

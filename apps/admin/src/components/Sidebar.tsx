@@ -23,6 +23,8 @@ const NAV = [
   { href: "/leads", label: "Заявки" },
 ];
 
+const SUPPORT_NAV = { href: "/support", label: "Поддержка" };
+
 interface SidebarProps {
   mobile?: boolean;
   onClose?: () => void;
@@ -97,9 +99,16 @@ export function Sidebar({ mobile = false, onClose }: SidebarProps) {
     switchAccount();
   };
 
-  const items = isSuper
-    ? [...NAV, { href: "/admins", label: "Админы" }]
-    : NAV;
+  const items = (() => {
+    const list = [...NAV];
+    if (user?.role === "ADMIN" || user?.role === "SUPER_ADMIN") {
+      list.push(SUPPORT_NAV);
+    }
+    if (isSuper) {
+      list.push({ href: "/admins", label: "Админы" });
+    }
+    return list;
+  })();
 
   const handleNavClick = () => {
     if (mobile) onClose?.();
