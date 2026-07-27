@@ -95,6 +95,17 @@ model Lead {
   updatedAt   DateTime   @updatedAt
 }
 
+model BlockRushScore {
+  id         String   @id @default(cuid())
+  playerId   String   @unique
+  playerName String
+  score      Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([score(sort: Desc)])
+}
+
 enum LeadStatus {
   NEW
   IN_PROGRESS
