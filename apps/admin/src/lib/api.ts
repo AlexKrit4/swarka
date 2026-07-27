@@ -482,3 +482,10 @@ export async function updateBillingSettings(data: {
     body: JSON.stringify(data),
   });
 }
+
+export async function removeBillingLedgerEntries(ids: string[]) {
+  return apiFetch<{ removed: number }>("/api/admin/billing/ledger/remove", {
+    method: "POST",
+    body: JSON.stringify({ ids }),
+  });
+}

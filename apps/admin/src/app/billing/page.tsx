@@ -9,6 +9,7 @@ import {
   getBillingHistory,
   getBillingStatus,
   manualBillingAdjust,
+  removeBillingLedgerEntries,
   updateBillingSettings,
   type BillingLedgerItem,
   type BillingStatus,
@@ -57,11 +58,14 @@ function BillingContentInner() {
   const [manualAmount, setManualAmount] = useState("220");
   const [manualDescription, setManualDescription] = useState("Корректировка баланса");
   const [savingSettings, setSavingSettings] = useState(false);
+  const [selectedLedgerIds, setSelectedLedgerIds] = useState<string[]>([]);
+  const [removingLedger, setRemovingLedger] = useState(false);
 
   const reload = async () => {
     const [nextStatus, history] = await Promise.all([getBillingStatus(), getBillingHistory()]);
     setStatus(nextStatus);
     setLedger(history.ledger);
+    setSelectedLedgerIds((prev) => prev.filter((id) => history.ledger.some((item) => item.id === id)));
   };
 
   useEffect(() => {
@@ -123,6 +127,49 @@ function BillingContentInner() {
       await reload();
     } finally {
       setSavingSettings(false);
+    }
+  };
+
+  const toggleLedgerSelection = (id: string) => {
+    setSelectedLedgerIds((prev) =>
+      prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id]
+    );
+  };
+
+  const toggleAllLedgerSelection = () => {
+    if (selectedLedgerIds.length === ledger.length) {
+      setSelectedLedgerIds([]);
+      return;
+    }
+    setSelectedLedgerIds(ledger.map((item) => item.id));
+  };
+
+  const handleRemoveSelectedLedger = async () => {
+    if (selectedLedgerIds.length === 0) return;
+
+    const count = selectedLedgerIds.length;
+    const confirmed = window.confirm(
+      count === 1
+        ? "Удалить выбранную операцию из истории? Баланс не изменится."
+        : `Удалить ${count} операций из истории? Баланс не изменится.`
+    );
+    if (!confirmed) return;
+
+    setRemovingLedger(true);
+    setMessage(null);
+    try {
+      const result = await removeBillingLedgerEntries(selectedLedgerIds);
+      setSelectedLedgerIds([]);
+      await reload();
+      setMessage(
+        result.removed === 1
+          ? "Операция удалена из истории"
+          : `Удалено операций: ${result.removed}`
+      );
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Не удалось удалить операции");
+    } finally {
+      setRemovingLedger(false);
     }
   };
 
@@ -243,7 +290,28 @@ function BillingContentInner() {
       </div>
 
       <div className="card">
-        <h2 className="font-semibold text-lg mb-4">История операций</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h2 className="font-semibold text-lg">История операций</h2>
+          {isSuper && ledger.length > 0 && (
+            <button
+              type="button"
+              className="btn-danger"
+              disabled={selectedLedgerIds.length === 0 || removingLedger}
+              onClick={handleRemoveSelectedLedger}
+            >
+              {removingLedger
+                ? "Удаление..."
+                : selectedLedgerIds.length > 0
+                  ? `Удалить выбранные (${selectedLedgerIds.length})`
+                  : "Удалить выбранные"}
+            </button>
+          )}
+        </div>
+        {isSuper && ledger.length > 0 && (
+          <p className="text-sm text-gray-500 mb-4">
+            Выберите операции, которые нужно убрать из истории. Баланс и работа сайта не изменятся.
+          </p>
+        )}
         {ledger.length === 0 ? (
           <p className="text-sm text-gray-500">Операций пока нет</p>
         ) : (
@@ -251,6 +319,16 @@ function BillingContentInner() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-gray-500 border-b">
+                  {isSuper && (
+                    <th className="pb-2 pr-3">
+                      <input
+                        type="checkbox"
+                        aria-label="Выбрать все операции"
+                        checked={ledger.length > 0 && selectedLedgerIds.length === ledger.length}
+                        onChange={toggleAllLedgerSelection}
+                      />
+                    </th>
+                  )}
                   <th className="pb-2 pr-4">Дата</th>
                   <th className="pb-2 pr-4">Тип</th>
                   <th className="pb-2 pr-4">Описание</th>
@@ -261,6 +339,16 @@ function BillingContentInner() {
               <tbody>
                 {ledger.map((item) => (
                   <tr key={item.id} className="border-b border-gray-50">
+                    {isSuper && (
+                      <td className="py-2 pr-3">
+                        <input
+                          type="checkbox"
+                          aria-label={`Выбрать операцию ${item.description}`}
+                          checked={selectedLedgerIds.includes(item.id)}
+                          onChange={() => toggleLedgerSelection(item.id)}
+                        />
+                      </td>
+                    )}
                     <td className="py-2 pr-4 whitespace-nowrap">
                       {new Date(item.createdAt).toLocaleString("ru-RU")}
                     </td>

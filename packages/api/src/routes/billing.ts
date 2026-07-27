@@ -8,6 +8,7 @@ import {
   getBillingStatus,
   manualAdjustBalance,
   MIN_TOPUP_RUB,
+  removeLedgerEntries,
   updateBillingSettings,
 } from "../lib/billing.js";
 import {
@@ -34,6 +35,10 @@ const manualAdjustSchema = z.object({
 const settingsSchema = z.object({
   dailyRateRub: z.number().int().min(1).max(1000).optional(),
   manualSiteEnabled: z.boolean().optional(),
+});
+
+const removeLedgerSchema = z.object({
+  ids: z.array(z.string().min(1)).min(1).max(100),
 });
 
 function adminReturnUrl(status: "success" | "pending") {
@@ -188,5 +193,25 @@ export async function billingRoutes(app: FastifyInstance) {
     }
 
     return updateBillingSettings(parsed.data);
+  });
+
+  app.post("/api/admin/billing/ledger/remove", { preHandler: requireSuperAdmin }, async (request, reply) => {
+    const parsed = removeLedgerSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: "Invalid payload" });
+    }
+
+    const user = request.user as { id: string; email: string };
+
+    try {
+      return await removeLedgerEntries({
+        ids: parsed.data.ids,
+        userId: user.id,
+        userEmail: user.email,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Не удалось удалить операции";
+      return reply.status(400).send({ error: message });
+    }
   });
 }

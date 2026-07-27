@@ -210,15 +210,19 @@ enum HostingLedgerType {
 }
 
 model HostingLedger {
-  id           String            @id @default(cuid())
-  type         HostingLedgerType
-  amountRub    Int
-  balanceAfter Int
-  description  String
-  paymentId    String?
-  userId       String?
-  userEmail    String?
-  createdAt    DateTime          @default(now())
+  id              String            @id @default(cuid())
+  type            HostingLedgerType
+  amountRub       Int
+  balanceAfter    Int
+  description     String
+  paymentId       String?
+  userId          String?
+  userEmail       String?
+  deletedAt       DateTime?
+  deletedByUserId String?
+  deletedByEmail  String?
+  createdAt       DateTime          @default(now())
 
   @@index([createdAt])
+  @@index([deletedAt])
 }

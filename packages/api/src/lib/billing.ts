@@ -233,9 +233,41 @@ export async function runDailyChargeIfDue(now = new Date()) {
 
 export async function getBillingHistory(limit = 50) {
   return prisma.hostingLedger.findMany({
+    where: { deletedAt: null },
     orderBy: { createdAt: "desc" },
     take: limit,
   });
+}
+
+export async function removeLedgerEntries(input: {
+  ids: string[];
+  userId: string;
+  userEmail: string;
+}) {
+  const uniqueIds = [...new Set(input.ids)];
+  if (uniqueIds.length === 0) {
+    throw new Error("Не выбраны операции для удаления");
+  }
+
+  const entries = await prisma.hostingLedger.findMany({
+    where: { id: { in: uniqueIds }, deletedAt: null },
+  });
+
+  if (entries.length === 0) {
+    throw new Error("Операции не найдены или уже удалены");
+  }
+
+  const now = new Date();
+  await prisma.hostingLedger.updateMany({
+    where: { id: { in: entries.map((entry) => entry.id) } },
+    data: {
+      deletedAt: now,
+      deletedByUserId: input.userId,
+      deletedByEmail: input.userEmail,
+    },
+  });
+
+  return { removed: entries.length };
 }
 
 export async function getBillingPayments(limit = 30) {
