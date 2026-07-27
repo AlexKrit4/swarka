@@ -48,12 +48,14 @@ export async function supportRoutes(app: FastifyInstance) {
   app.get("/api/admin/support/my-thread", { preHandler: requireEditor }, async (request, reply) => {
     const actor = await loadActor(request.user as AuthUser);
     if (!actor) return reply.status(403).send({ error: "Forbidden" });
-    if (actor.role !== "ADMIN") {
-      return reply.status(400).send({ error: "Для суперадмина используйте список диалогов" });
+    if (actor.role === "SUPER_ADMIN") {
+      // Super admins use the inbox UI; never error here (avoids mobile toast spam).
+      return { mode: "super" as const, thread: null, messages: [] };
     }
 
     try {
-      return await getAdminOwnSupportChat(actor);
+      const chat = await getAdminOwnSupportChat(actor);
+      return { mode: "admin" as const, ...chat };
     } catch (err) {
       return reply.status(400).send({ error: err instanceof Error ? err.message : "Ошибка" });
     }

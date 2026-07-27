@@ -599,7 +599,8 @@ export async function getSupportUnreadCount() {
 
 export async function getMySupportThread() {
   return apiFetch<{
-    thread: { id: string; adminUserId: string; updatedAt: string };
+    mode: "admin" | "super";
+    thread: { id: string; adminUserId: string; updatedAt: string } | null;
     messages: SupportMessage[];
   }>("/api/admin/support/my-thread");
 }

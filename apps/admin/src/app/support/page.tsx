@@ -234,6 +234,7 @@ function AdminSupportView({ userId }: { userId: string }) {
 
   const reload = useCallback(async () => {
     const data = await getMySupportThread();
+    if (data.mode === "super" || !data.thread) return;
     setThreadId(data.thread.id);
     setMessages(data.messages);
     await markSupportThreadRead(data.thread.id).catch(() => {});
