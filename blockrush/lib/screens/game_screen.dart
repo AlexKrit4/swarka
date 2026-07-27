@@ -319,10 +319,6 @@ class _GameScreenState extends State<GameScreen> {
                           _hoverRow = row;
                           _hoverCol = col;
                         }),
-                        onLeave: () => setState(() {
-                          _hoverRow = null;
-                          _hoverCol = null;
-                        }),
                         onPlace: _place,
                       ),
                     ),
@@ -343,7 +339,7 @@ class _GameScreenState extends State<GameScreen> {
                     ),
                     const SizedBox(height: 8),
                     SizedBox(
-                      height: constraints.maxHeight < 650 ? 96 : 112,
+                      height: constraints.maxHeight < 650 ? 108 : 128,
                       child: Row(
                         children: List.generate(
                           3,
@@ -495,7 +491,6 @@ class _GameBoard extends StatelessWidget {
     required this.hoverRow,
     required this.hoverCol,
     required this.onHover,
-    required this.onLeave,
     required this.onPlace,
   });
 
@@ -505,7 +500,6 @@ class _GameBoard extends StatelessWidget {
   final int? hoverRow;
   final int? hoverCol;
   final void Function(int row, int col) onHover;
-  final VoidCallback onLeave;
   final Future<void> Function(int piece, int row, int col) onPlace;
 
   GridPoint _originFor(GamePiece piece, int row, int col) {
@@ -560,20 +554,37 @@ class _GameBoard extends StatelessWidget {
               onWillAcceptWithDetails: (details) {
                 final piece = engine.pieces[details.data];
                 if (piece == null) return false;
-                final origin = _originFor(piece, row, col);
+                final ideal = _originFor(piece, row, col);
+                final origin = engine.nearestPlacement(
+                  piece,
+                  ideal.row,
+                  ideal.col,
+                  previous: hoverRow == null || hoverCol == null
+                      ? null
+                      : GridPoint(hoverRow!, hoverCol!),
+                );
+                if (origin == null) return false;
                 onHover(origin.row, origin.col);
-                return engine.canPlace(piece, origin.row, origin.col);
+                return true;
               },
-              onLeave: (_) => onLeave(),
               onAcceptWithDetails: (details) {
                 final piece = engine.pieces[details.data];
                 if (piece == null) return;
-                final origin = _originFor(piece, row, col);
+                final ideal = _originFor(piece, row, col);
+                final origin = engine.nearestPlacement(
+                  piece,
+                  ideal.row,
+                  ideal.col,
+                  previous: hoverRow == null || hoverCol == null
+                      ? null
+                      : GridPoint(hoverRow!, hoverCol!),
+                );
+                if (origin == null) return;
                 onPlace(details.data, origin.row, origin.col);
               },
               builder: (context, candidates, rejects) => AnimatedContainer(
-                duration: const Duration(milliseconds: 160),
-                curve: Curves.easeOut,
+                duration: const Duration(milliseconds: 190),
+                curve: Curves.easeOutCubic,
                 margin: const EdgeInsets.all(1.5),
                 decoration: BoxDecoration(
                   color: isClearing
@@ -625,8 +636,13 @@ class _PieceDock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (piece == null) return const SizedBox.expand();
-    const feedbackCellSize = 34.0;
-    final preview = _PieceView(piece: piece!, cellSize: 27);
+    const feedbackCellSize = 39.0;
+    final widthCellSize = 104 / piece!.width;
+    final heightCellSize = 110 / piece!.height;
+    final dockCellSize = widthCellSize < heightCellSize
+        ? (widthCellSize < 32 ? widthCellSize : 32.0)
+        : (heightCellSize < 32 ? heightCellSize : 32.0);
+    final preview = _PieceView(piece: piece!, cellSize: dockCellSize);
     if (!enabled) return Opacity(opacity: 0.4, child: preview);
     return Draggable<int>(
       data: index,

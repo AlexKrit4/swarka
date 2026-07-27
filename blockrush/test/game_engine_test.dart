@@ -10,6 +10,42 @@ List<List<int?>> emptyBoard() =>
     List.generate(boardSize, (_) => List<int?>.filled(boardSize, null));
 
 void main() {
+  group('piece library and snapping', () {
+    test('offers thirty distinct shape orientations', () {
+      expect(GameEngine.shapeCount, 30);
+    });
+
+    test('finds a nearby valid cell when the intended one is blocked', () {
+      final board = emptyBoard();
+      board[3][3] = 1;
+      final single = piece(const [GridPoint(0, 0)]);
+      final engine = GameEngine(
+        initialBoard: board,
+        initialPieces: [single, single, single],
+      );
+
+      final snapped = engine.nearestPlacement(single, 3, 3);
+
+      expect(snapped, isNotNull);
+      expect(snapped, isNot(const GridPoint(3, 3)));
+      expect(engine.canPlace(single, snapped!.row, snapped.col), isTrue);
+    });
+
+    test('holds the previous snap across one cell to avoid jitter', () {
+      final single = piece(const [GridPoint(0, 0)]);
+      final engine = GameEngine(initialPieces: [single, single, single]);
+
+      final snapped = engine.nearestPlacement(
+        single,
+        3,
+        4,
+        previous: const GridPoint(3, 3),
+      );
+
+      expect(snapped, const GridPoint(3, 3));
+    });
+  });
+
   group('placement', () {
     test('places a piece and rejects overlap and out-of-bounds moves', () {
       final single = piece(const [GridPoint(0, 0)]);

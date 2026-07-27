@@ -92,13 +92,29 @@ class GameEngine {
     [GridPoint(0, 0), GridPoint(1, 0)],
     [GridPoint(0, 0), GridPoint(0, 1), GridPoint(0, 2)],
     [GridPoint(0, 0), GridPoint(1, 0), GridPoint(2, 0)],
-    [GridPoint(0, 0), GridPoint(0, 1), GridPoint(1, 0), GridPoint(1, 1)],
-    [GridPoint(0, 0), GridPoint(1, 0), GridPoint(1, 1)],
+    [GridPoint(0, 0), GridPoint(0, 1), GridPoint(1, 0)],
     [GridPoint(0, 0), GridPoint(0, 1), GridPoint(1, 1)],
-    [GridPoint(0, 0), GridPoint(1, 0), GridPoint(2, 0), GridPoint(2, 1)],
-    [GridPoint(0, 0), GridPoint(0, 1), GridPoint(0, 2), GridPoint(1, 1)],
+    [GridPoint(0, 0), GridPoint(1, 0), GridPoint(1, 1)],
+    [GridPoint(0, 1), GridPoint(1, 0), GridPoint(1, 1)],
+    [GridPoint(0, 0), GridPoint(0, 1), GridPoint(1, 0), GridPoint(1, 1)],
     [GridPoint(0, 0), GridPoint(0, 1), GridPoint(0, 2), GridPoint(0, 3)],
     [GridPoint(0, 0), GridPoint(1, 0), GridPoint(2, 0), GridPoint(3, 0)],
+    [GridPoint(0, 0), GridPoint(1, 0), GridPoint(2, 0), GridPoint(2, 1)],
+    [GridPoint(0, 1), GridPoint(1, 1), GridPoint(2, 0), GridPoint(2, 1)],
+    [GridPoint(0, 0), GridPoint(0, 1), GridPoint(1, 0), GridPoint(2, 0)],
+    [GridPoint(0, 0), GridPoint(0, 1), GridPoint(1, 1), GridPoint(2, 1)],
+    [GridPoint(0, 0), GridPoint(0, 1), GridPoint(0, 2), GridPoint(1, 2)],
+    [GridPoint(0, 0), GridPoint(0, 1), GridPoint(0, 2), GridPoint(1, 0)],
+    [GridPoint(0, 2), GridPoint(1, 0), GridPoint(1, 1), GridPoint(1, 2)],
+    [GridPoint(0, 0), GridPoint(1, 0), GridPoint(1, 1), GridPoint(1, 2)],
+    [GridPoint(0, 0), GridPoint(0, 1), GridPoint(0, 2), GridPoint(1, 1)],
+    [GridPoint(0, 1), GridPoint(1, 0), GridPoint(1, 1), GridPoint(1, 2)],
+    [GridPoint(0, 0), GridPoint(1, 0), GridPoint(1, 1), GridPoint(2, 0)],
+    [GridPoint(0, 1), GridPoint(1, 0), GridPoint(1, 1), GridPoint(2, 1)],
+    [GridPoint(0, 1), GridPoint(0, 2), GridPoint(1, 0), GridPoint(1, 1)],
+    [GridPoint(0, 0), GridPoint(0, 1), GridPoint(1, 1), GridPoint(1, 2)],
+    [GridPoint(0, 0), GridPoint(1, 0), GridPoint(1, 1), GridPoint(2, 1)],
+    [GridPoint(0, 1), GridPoint(1, 0), GridPoint(1, 1), GridPoint(2, 0)],
     [
       GridPoint(0, 0),
       GridPoint(0, 1),
@@ -108,12 +124,14 @@ class GameEngine {
     ],
     [
       GridPoint(0, 0),
-      GridPoint(0, 1),
       GridPoint(0, 2),
       GridPoint(1, 0),
+      GridPoint(1, 1),
       GridPoint(1, 2),
     ],
   ];
+
+  static int get shapeCount => _shapes.length;
 
   bool canPlace(GamePiece piece, int row, int col) {
     for (final cell in piece.cells) {
@@ -128,6 +146,44 @@ class GameEngine {
       }
     }
     return true;
+  }
+
+  /// Finds a forgiving snap point near the player's intended board cell.
+  ///
+  /// A valid previous snap is retained for one cell of movement to prevent
+  /// jitter while the finger crosses cell boundaries.
+  GridPoint? nearestPlacement(
+    GamePiece piece,
+    int idealRow,
+    int idealCol, {
+    int radius = 2,
+    GridPoint? previous,
+  }) {
+    if (previous != null && canPlace(piece, previous.row, previous.col)) {
+      final rowDelta = previous.row - idealRow;
+      final colDelta = previous.col - idealCol;
+      if (rowDelta * rowDelta + colDelta * colDelta <= 1) {
+        return previous;
+      }
+    }
+
+    GridPoint? best;
+    var bestDistance = radius * radius + 1;
+    for (var row = idealRow - radius; row <= idealRow + radius; row++) {
+      for (var col = idealCol - radius; col <= idealCol + radius; col++) {
+        final rowDelta = row - idealRow;
+        final colDelta = col - idealCol;
+        final distance = rowDelta * rowDelta + colDelta * colDelta;
+        if (distance > radius * radius ||
+            distance >= bestDistance ||
+            !canPlace(piece, row, col)) {
+          continue;
+        }
+        best = GridPoint(row, col);
+        bestDistance = distance;
+      }
+    }
+    return best;
   }
 
   PlacementResult place(int pieceIndex, int row, int col) {
