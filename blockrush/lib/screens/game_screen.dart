@@ -28,6 +28,7 @@ class _GameScreenState extends State<GameScreen> {
   final GameAudio _audio = GameAudio();
   final UpdateService _updates = UpdateService();
   final Set<GridPoint> _clearing = {};
+  Timer? _updateTimer;
   SharedPreferences? _preferences;
   int _bestScore = 0;
   int? _hoverRow;
@@ -56,7 +57,7 @@ class _GameScreenState extends State<GameScreen> {
         _tutorialStep = 0;
       }
     });
-    Future<void>.delayed(const Duration(seconds: 2), () {
+    _updateTimer = Timer(const Duration(seconds: 2), () {
       if (mounted) unawaited(_checkForUpdate(silent: true));
     });
   }
@@ -352,6 +353,7 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   void dispose() {
+    _updateTimer?.cancel();
     unawaited(_audio.dispose());
     super.dispose();
   }
