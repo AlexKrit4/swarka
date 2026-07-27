@@ -33,8 +33,8 @@
     <string name="app_version_label">Версия %1$s</string>
     <string name="update_available_title">Доступна новая версия!</string>
     <string name="update_available_subtitle">Версия %1$s готова к установке</string>
+    <string name="update_unknown_sources_warning">Android или Google Play могут показать предупреждение «Установка из неизвестных источников» или «Приложение может быть опасным». Это стандартное сообщение — приложение обновляется напрямую с официального сервера SWARKA.\n\nПожалуйста, нажмите «Всё равно установить» (или «Разрешить») и продолжите обновление.</string>
     <string name="update_now">Обновить</string>
-    <string name="update_later">Позже</string>
     <string name="update_downloading">Загрузка… %1$d%%</string>
     <string name="update_download_failed">Не удалось скачать обновление</string>
     <string name="update_install_permission_denied">Разрешите установку приложений для обновления</string>

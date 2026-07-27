@@ -21,11 +21,11 @@ class UpdateGateActivity : AppCompatActivity() {
     private lateinit var checkProgressBar: ProgressBar
     private lateinit var titleText: TextView
     private lateinit var subtitleText: TextView
+    private lateinit var warningText: TextView
     private lateinit var downloadProgressBar: ProgressBar
     private lateinit var progressText: TextView
     private lateinit var errorText: TextView
     private lateinit var updateButton: MaterialButton
-    private lateinit var laterButton: MaterialButton
 
     private var latestVersion: AppVersionInfo? = null
     private var isDownloading = false
@@ -47,14 +47,13 @@ class UpdateGateActivity : AppCompatActivity() {
         checkProgressBar = findViewById(R.id.checkProgressBar)
         titleText = findViewById(R.id.titleText)
         subtitleText = findViewById(R.id.subtitleText)
+        warningText = findViewById(R.id.warningText)
         downloadProgressBar = findViewById(R.id.progressBar)
         progressText = findViewById(R.id.progressText)
         errorText = findViewById(R.id.errorText)
         updateButton = findViewById(R.id.updateButton)
-        laterButton = findViewById(R.id.laterButton)
 
         updateButton.setOnClickListener { onUpdateClicked() }
-        laterButton.setOnClickListener { continueToApp() }
 
         hideUpdateUi()
         checkForUpdates()
@@ -81,18 +80,18 @@ class UpdateGateActivity : AppCompatActivity() {
     private fun hideUpdateUi() {
         titleText.visibility = View.GONE
         subtitleText.visibility = View.GONE
+        warningText.visibility = View.GONE
         downloadProgressBar.visibility = View.GONE
         progressText.visibility = View.GONE
         errorText.visibility = View.GONE
         updateButton.visibility = View.GONE
-        laterButton.visibility = View.GONE
     }
 
     private fun showUpdateUi(latest: AppVersionInfo) {
         titleText.visibility = View.VISIBLE
         subtitleText.visibility = View.VISIBLE
+        warningText.visibility = View.VISIBLE
         updateButton.visibility = View.VISIBLE
-        laterButton.visibility = View.VISIBLE
         subtitleText.text = getString(R.string.update_available_subtitle, latest.versionName)
     }
 
@@ -112,7 +111,6 @@ class UpdateGateActivity : AppCompatActivity() {
         isDownloading = true
         errorText.visibility = View.GONE
         updateButton.isEnabled = false
-        laterButton.isEnabled = false
         downloadProgressBar.visibility = View.VISIBLE
         progressText.visibility = View.VISIBLE
         downloadProgressBar.progress = 0
@@ -128,7 +126,6 @@ class UpdateGateActivity : AppCompatActivity() {
 
             isDownloading = false
             updateButton.isEnabled = true
-            laterButton.isEnabled = true
 
             result.onSuccess { file ->
                 ApkInstaller.install(this@UpdateGateActivity, file)
@@ -181,9 +178,9 @@ class UpdateGateActivity : AppCompatActivity() {
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         if (latestVersion != null && !isDownloading) {
-            continueToApp()
-        } else {
             moveTaskToBack(true)
+            return
         }
+        super.onBackPressed()
     }
 }
