@@ -4,22 +4,105 @@ export const MIN_TOPUP_RUB = 100;
 
 const MSK_OFFSET_MS = 3 * 60 * 60 * 1000;
 
+const DEFAULT_TARIFFS = [
+  {
+    id: "tariff_basic",
+    name: "Базовый",
+    tagline: "Сайт работает стабильно",
+    cpuLabel: "2 ядра",
+    ramLabel: "2 ГБ RAM",
+    storageLabel: "SSD 20 ГБ",
+    extrasLabel: "",
+    dailyRateRub: 22,
+    sortOrder: 10,
+  },
+  {
+    id: "tariff_standard",
+    name: "Стандарт",
+    tagline: "Быстрее открывается, запас под пики",
+    cpuLabel: "4 ядра",
+    ramLabel: "4 ГБ RAM",
+    storageLabel: "SSD 40 ГБ",
+    extrasLabel: "",
+    dailyRateRub: 35,
+    sortOrder: 20,
+  },
+  {
+    id: "tariff_pro",
+    name: "Про",
+    tagline: "Для рекламы и большой нагрузки",
+    cpuLabel: "6 ядер",
+    ramLabel: "8 ГБ RAM",
+    storageLabel: "SSD 80 ГБ",
+    extrasLabel: "Приоритет",
+    dailyRateRub: 55,
+    sortOrder: 30,
+  },
+  {
+    id: "tariff_max",
+    name: "Максимум",
+    tagline: "Как у серьёзного хостинга",
+    cpuLabel: "8 ядер",
+    ramLabel: "16 ГБ RAM",
+    storageLabel: "SSD 160 ГБ",
+    extrasLabel: "Резерв питания",
+    dailyRateRub: 80,
+    sortOrder: 40,
+  },
+] as const;
+
 function mskDateKey(date = new Date()) {
   const msk = new Date(date.getTime() + MSK_OFFSET_MS);
   return msk.toISOString().slice(0, 10);
 }
 
+export async function ensureHostingTariffs() {
+  const count = await prisma.hostingTariff.count();
+  if (count > 0) return;
+
+  await prisma.hostingTariff.createMany({
+    data: DEFAULT_TARIFFS.map((tariff) => ({ ...tariff, isActive: true })),
+  });
+}
+
 export async function ensureHostingBalance() {
-  const existing = await prisma.hostingBalance.findUnique({ where: { id: "singleton" } });
-  if (existing) return existing;
+  await ensureHostingTariffs();
+
+  const existing = await prisma.hostingBalance.findUnique({
+    where: { id: "singleton" },
+    include: { tariff: true },
+  });
+  if (existing) {
+    if (!existing.tariffId) {
+      const basic = await prisma.hostingTariff.findFirst({
+        where: { name: "Базовый", isActive: true },
+        orderBy: { sortOrder: "asc" },
+      });
+      if (basic) {
+        return prisma.hostingBalance.update({
+          where: { id: "singleton" },
+          data: { tariffId: basic.id },
+          include: { tariff: true },
+        });
+      }
+    }
+    return existing;
+  }
+
+  const basic = await prisma.hostingTariff.findFirst({
+    where: { OR: [{ id: "tariff_basic" }, { name: "Базовый" }] },
+    orderBy: { sortOrder: "asc" },
+  });
 
   return prisma.hostingBalance.create({
     data: {
       id: "singleton",
       balanceRub: 660,
-      dailyRateRub: 22,
+      dailyRateRub: basic?.dailyRateRub ?? 22,
+      tariffId: basic?.id,
       manualSiteEnabled: true,
     },
+    include: { tariff: true },
   });
 }
 
@@ -40,34 +123,68 @@ export function estimatePaidUntil(balanceRub: number, dailyRateRub: number) {
   return until.toISOString();
 }
 
+function serializeTariff(tariff: {
+  id: string;
+  name: string;
+  tagline: string;
+  cpuLabel: string;
+  ramLabel: string;
+  storageLabel: string;
+  extrasLabel: string;
+  dailyRateRub: number;
+  sortOrder: number;
+  isActive: boolean;
+}) {
+  return {
+    id: tariff.id,
+    name: tariff.name,
+    tagline: tariff.tagline,
+    cpuLabel: tariff.cpuLabel,
+    ramLabel: tariff.ramLabel,
+    storageLabel: tariff.storageLabel,
+    extrasLabel: tariff.extrasLabel,
+    dailyRateRub: tariff.dailyRateRub,
+    sortOrder: tariff.sortOrder,
+    isActive: tariff.isActive,
+    monthlyEstimateRub: tariff.dailyRateRub * 30,
+  };
+}
+
+export async function listHostingTariffs(options?: { includeInactive?: boolean }) {
+  await ensureHostingTariffs();
+  return prisma.hostingTariff.findMany({
+    where: options?.includeInactive ? undefined : { isActive: true },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+  });
+}
+
 export async function getBillingStatus() {
   const balance = await ensureHostingBalance();
+  const selectedTariff = balance.tariff;
+  const selectedRate = selectedTariff?.dailyRateRub ?? balance.dailyRateRub;
+  const ratePending = selectedRate !== balance.dailyRateRub;
+  // Days / paid-until preview uses the selected plan (what they'll pay going forward)
+  const previewRate = selectedRate;
   const active = isSiteActive(balance.balanceRub, balance.dailyRateRub, balance.manualSiteEnabled);
-  const days = daysRemaining(balance.balanceRub, balance.dailyRateRub);
+  const days = daysRemaining(balance.balanceRub, previewRate);
+  const tariffs = await listHostingTariffs({ includeInactive: false });
 
   return {
     balanceRub: balance.balanceRub,
     dailyRateRub: balance.dailyRateRub,
+    selectedDailyRateRub: selectedRate,
+    rateChangePending: ratePending,
     daysRemaining: days,
     isSiteEnabled: active,
     manualSiteEnabled: balance.manualSiteEnabled,
-    paidUntil: estimatePaidUntil(balance.balanceRub, balance.dailyRateRub),
-    monthlyEstimateRub: balance.dailyRateRub * 30,
+    paidUntil: estimatePaidUntil(balance.balanceRub, previewRate),
+    monthlyEstimateRub: previewRate * 30,
     minTopupRub: MIN_TOPUP_RUB,
     lowBalanceWarning: days > 0 && days <= 3,
+    tariffId: balance.tariffId,
+    tariff: selectedTariff ? serializeTariff(selectedTariff) : null,
+    tariffs: tariffs.map(serializeTariff),
   };
-}
-
-async function appendLedger(input: {
-  type: HostingLedgerType;
-  amountRub: number;
-  balanceAfter: number;
-  description: string;
-  paymentId?: string;
-  userId?: string;
-  userEmail?: string;
-}) {
-  return prisma.hostingLedger.create({ data: input });
 }
 
 export async function applySuccessfulPayment(paymentId: string, externalId: string) {
@@ -174,20 +291,111 @@ export async function manualAdjustBalance(input: {
 }
 
 export async function updateBillingSettings(input: {
-  dailyRateRub?: number;
   manualSiteEnabled?: boolean;
 }) {
   await ensureHostingBalance();
   await prisma.hostingBalance.update({
     where: { id: "singleton" },
     data: {
-      dailyRateRub: input.dailyRateRub,
       manualSiteEnabled: input.manualSiteEnabled,
     },
   });
   return getBillingStatus();
 }
 
+export async function selectHostingTariff(tariffId: string) {
+  await ensureHostingBalance();
+  const tariff = await prisma.hostingTariff.findUnique({ where: { id: tariffId } });
+  if (!tariff || !tariff.isActive) {
+    throw new Error("Тариф не найден или отключён");
+  }
+
+  await prisma.hostingBalance.update({
+    where: { id: "singleton" },
+    data: { tariffId: tariff.id },
+  });
+
+  return getBillingStatus();
+}
+
+export type TariffInput = {
+  name: string;
+  tagline?: string;
+  cpuLabel: string;
+  ramLabel: string;
+  storageLabel: string;
+  extrasLabel?: string;
+  dailyRateRub: number;
+  sortOrder?: number;
+  isActive?: boolean;
+};
+
+export async function createHostingTariff(input: TariffInput) {
+  await ensureHostingTariffs();
+  const created = await prisma.hostingTariff.create({
+    data: {
+      name: input.name.trim(),
+      tagline: (input.tagline ?? "").trim(),
+      cpuLabel: input.cpuLabel.trim(),
+      ramLabel: input.ramLabel.trim(),
+      storageLabel: input.storageLabel.trim(),
+      extrasLabel: (input.extrasLabel ?? "").trim(),
+      dailyRateRub: input.dailyRateRub,
+      sortOrder: input.sortOrder ?? 100,
+      isActive: input.isActive ?? true,
+    },
+  });
+  return serializeTariff(created);
+}
+
+export async function updateHostingTariff(id: string, input: Partial<TariffInput>) {
+  const existing = await prisma.hostingTariff.findUnique({ where: { id } });
+  if (!existing) {
+    throw new Error("Тариф не найден");
+  }
+
+  const updated = await prisma.hostingTariff.update({
+    where: { id },
+    data: {
+      name: input.name?.trim(),
+      tagline: input.tagline !== undefined ? input.tagline.trim() : undefined,
+      cpuLabel: input.cpuLabel?.trim(),
+      ramLabel: input.ramLabel?.trim(),
+      storageLabel: input.storageLabel?.trim(),
+      extrasLabel: input.extrasLabel !== undefined ? input.extrasLabel.trim() : undefined,
+      dailyRateRub: input.dailyRateRub,
+      sortOrder: input.sortOrder,
+      isActive: input.isActive,
+    },
+  });
+
+  return serializeTariff(updated);
+}
+
+export async function deleteHostingTariff(id: string) {
+  const existing = await prisma.hostingTariff.findUnique({ where: { id } });
+  if (!existing) {
+    throw new Error("Тариф не найден");
+  }
+
+  const balance = await ensureHostingBalance();
+  if (balance.tariffId === id) {
+    throw new Error("Нельзя удалить активный тариф. Сначала выберите другой.");
+  }
+
+  const activeCount = await prisma.hostingTariff.count({ where: { isActive: true } });
+  if (existing.isActive && activeCount <= 1) {
+    throw new Error("Должен остаться хотя бы один активный тариф");
+  }
+
+  await prisma.hostingTariff.delete({ where: { id } });
+  return { success: true };
+}
+
+/**
+ * Syncs HostingBalance.dailyRateRub from the selected tariff, then charges.
+ * New tariff price applies starting from this daily charge (00:05).
+ */
 export async function runDailyChargeIfDue(now = new Date()) {
   const balance = await ensureHostingBalance();
   const todayKey = mskDateKey(now);
@@ -199,21 +407,36 @@ export async function runDailyChargeIfDue(now = new Date()) {
     }
   }
 
-  if (balance.balanceRub < balance.dailyRateRub) {
+  const selectedRate = balance.tariff?.dailyRateRub ?? balance.dailyRateRub;
+  if (selectedRate !== balance.dailyRateRub) {
     await prisma.hostingBalance.update({
       where: { id: "singleton" },
-      data: { lastDailyChargeAt: now },
+      data: { dailyRateRub: selectedRate },
+    });
+  }
+
+  const chargeRate = selectedRate;
+
+  if (balance.balanceRub < chargeRate) {
+    await prisma.hostingBalance.update({
+      where: { id: "singleton" },
+      data: {
+        dailyRateRub: chargeRate,
+        lastDailyChargeAt: now,
+      },
     });
     return { charged: false, reason: "insufficient_balance" as const };
   }
 
-  const nextBalance = balance.balanceRub - balance.dailyRateRub;
+  const nextBalance = balance.balanceRub - chargeRate;
+  const tariffName = balance.tariff?.name;
 
   await prisma.$transaction(async (tx) => {
     await tx.hostingBalance.update({
       where: { id: "singleton" },
       data: {
         balanceRub: nextBalance,
+        dailyRateRub: chargeRate,
         lastDailyChargeAt: now,
       },
     });
@@ -221,14 +444,16 @@ export async function runDailyChargeIfDue(now = new Date()) {
     await tx.hostingLedger.create({
       data: {
         type: HostingLedgerType.DAILY_CHARGE,
-        amountRub: -balance.dailyRateRub,
+        amountRub: -chargeRate,
         balanceAfter: nextBalance,
-        description: `Списание за сутки работы сервера (${todayKey})`,
+        description: tariffName
+          ? `Списание за сутки · тариф «${tariffName}» (${todayKey})`
+          : `Списание за сутки работы сервера (${todayKey})`,
       },
     });
   });
 
-  return { charged: true, balanceRub: nextBalance };
+  return { charged: true, balanceRub: nextBalance, dailyRateRub: chargeRate };
 }
 
 export async function getBillingHistory(limit = 50) {

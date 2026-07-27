@@ -174,9 +174,32 @@ model HostingBalance {
   id                String    @id @default("singleton")
   balanceRub        Int       @default(0)
   dailyRateRub      Int       @default(22)
+  tariffId          String?
   manualSiteEnabled Boolean   @default(true)
   lastDailyChargeAt DateTime?
   updatedAt         DateTime  @updatedAt
+
+  tariff HostingTariff? @relation(fields: [tariffId], references: [id], onDelete: SetNull)
+}
+
+model HostingTariff {
+  id           String   @id @default(cuid())
+  name         String
+  tagline      String   @default("")
+  cpuLabel     String
+  ramLabel     String
+  storageLabel String
+  extrasLabel  String   @default("")
+  dailyRateRub Int
+  sortOrder    Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  balances HostingBalance[]
+
+  @@index([sortOrder])
+  @@index([isActive])
 }
 
 enum HostingPaymentStatus {

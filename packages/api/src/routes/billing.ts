@@ -2,14 +2,19 @@ import type { FastifyInstance } from "fastify";
 import { prisma, HostingPaymentStatus } from "@swarka/database";
 import {
   applySuccessfulPayment,
+  createHostingTariff,
   createPendingPayment,
+  deleteHostingTariff,
   getBillingHistory,
   getBillingPayments,
   getBillingStatus,
+  listHostingTariffs,
   manualAdjustBalance,
   MIN_TOPUP_RUB,
   removeLedgerEntries,
+  selectHostingTariff,
   updateBillingSettings,
+  updateHostingTariff,
 } from "../lib/billing.js";
 import {
   buildYooMoneyPaymentUrl,
@@ -33,13 +38,33 @@ const manualAdjustSchema = z.object({
 });
 
 const settingsSchema = z.object({
-  dailyRateRub: z.number().int().min(1).max(1000).optional(),
   manualSiteEnabled: z.boolean().optional(),
 });
 
 const removeLedgerSchema = z.object({
   ids: z.array(z.string().min(1)).min(1).max(100),
 });
+
+const selectTariffSchema = z.object({
+  tariffId: z.string().min(1),
+});
+
+const tariffBodySchema = z.object({
+  name: z.string().min(1).max(80),
+  tagline: z.string().max(200).optional(),
+  cpuLabel: z.string().min(1).max(80),
+  ramLabel: z.string().min(1).max(80),
+  storageLabel: z.string().min(1).max(80),
+  extrasLabel: z.string().max(120).optional(),
+  dailyRateRub: z.number().int().min(1).max(10000),
+  sortOrder: z.number().int().min(0).max(10000).optional(),
+  isActive: z.boolean().optional(),
+});
+
+const tariffUpdateSchema = tariffBodySchema.partial().refine(
+  (data) => Object.keys(data).length > 0,
+  { message: "Empty update" }
+);
 
 function adminReturnUrl(status: "success" | "pending") {
   const base = process.env.ADMIN_PUBLIC_URL ?? "http://localhost:3001";
@@ -193,6 +218,71 @@ export async function billingRoutes(app: FastifyInstance) {
     }
 
     return updateBillingSettings(parsed.data);
+  });
+
+  app.get("/api/admin/billing/tariffs", { preHandler: requireAuth }, async (request) => {
+    const user = request.user as { role?: string };
+    const includeInactive = user.role === "SUPER_ADMIN";
+    const tariffs = await listHostingTariffs({ includeInactive });
+    return {
+      tariffs: tariffs.map((tariff) => ({
+        ...tariff,
+        monthlyEstimateRub: tariff.dailyRateRub * 30,
+      })),
+    };
+  });
+
+  app.post("/api/admin/billing/tariff/select", { preHandler: requireEditor }, async (request, reply) => {
+    const parsed = selectTariffSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: "Invalid payload" });
+    }
+
+    try {
+      return await selectHostingTariff(parsed.data.tariffId);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Не удалось сменить тариф";
+      return reply.status(400).send({ error: message });
+    }
+  });
+
+  app.post("/api/admin/billing/tariffs", { preHandler: requireSuperAdmin }, async (request, reply) => {
+    const parsed = tariffBodySchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: "Invalid payload" });
+    }
+
+    try {
+      return await createHostingTariff(parsed.data);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Не удалось создать тариф";
+      return reply.status(400).send({ error: message });
+    }
+  });
+
+  app.put("/api/admin/billing/tariffs/:id", { preHandler: requireSuperAdmin }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const parsed = tariffUpdateSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: "Invalid payload" });
+    }
+
+    try {
+      return await updateHostingTariff(id, parsed.data);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Не удалось обновить тариф";
+      return reply.status(400).send({ error: message });
+    }
+  });
+
+  app.delete("/api/admin/billing/tariffs/:id", { preHandler: requireSuperAdmin }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    try {
+      return await deleteHostingTariff(id);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Не удалось удалить тариф";
+      return reply.status(400).send({ error: message });
+    }
   });
 
   app.post("/api/admin/billing/ledger/remove", { preHandler: requireSuperAdmin }, async (request, reply) => {

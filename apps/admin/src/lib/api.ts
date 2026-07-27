@@ -405,9 +405,25 @@ export async function uploadFile(file: File): Promise<{ url: string }> {
   return res.json();
 }
 
+export interface BillingTariff {
+  id: string;
+  name: string;
+  tagline: string;
+  cpuLabel: string;
+  ramLabel: string;
+  storageLabel: string;
+  extrasLabel: string;
+  dailyRateRub: number;
+  sortOrder: number;
+  isActive: boolean;
+  monthlyEstimateRub: number;
+}
+
 export interface BillingStatus {
   balanceRub: number;
   dailyRateRub: number;
+  selectedDailyRateRub?: number;
+  rateChangePending?: boolean;
   daysRemaining: number;
   isSiteEnabled: boolean;
   manualSiteEnabled: boolean;
@@ -415,6 +431,9 @@ export interface BillingStatus {
   monthlyEstimateRub: number;
   minTopupRub: number;
   lowBalanceWarning: boolean;
+  tariffId?: string | null;
+  tariff?: BillingTariff | null;
+  tariffs?: BillingTariff[];
   yookassaConfigured?: boolean;
   yoomoneyConfigured?: boolean;
   paymentConfigured?: boolean;
@@ -474,7 +493,6 @@ export async function manualBillingAdjust(amountRub: number, description: string
 }
 
 export async function updateBillingSettings(data: {
-  dailyRateRub?: number;
   manualSiteEnabled?: boolean;
 }) {
   return apiFetch<BillingStatus>("/api/admin/billing/settings", {
@@ -487,5 +505,59 @@ export async function removeBillingLedgerEntries(ids: string[]) {
   return apiFetch<{ removed: number }>("/api/admin/billing/ledger/remove", {
     method: "POST",
     body: JSON.stringify({ ids }),
+  });
+}
+
+export async function getBillingTariffs() {
+  return apiFetch<{ tariffs: BillingTariff[] }>("/api/admin/billing/tariffs");
+}
+
+export async function selectBillingTariff(tariffId: string) {
+  return apiFetch<BillingStatus>("/api/admin/billing/tariff/select", {
+    method: "POST",
+    body: JSON.stringify({ tariffId }),
+  });
+}
+
+export async function createBillingTariff(data: {
+  name: string;
+  tagline?: string;
+  cpuLabel: string;
+  ramLabel: string;
+  storageLabel: string;
+  extrasLabel?: string;
+  dailyRateRub: number;
+  sortOrder?: number;
+  isActive?: boolean;
+}) {
+  return apiFetch<BillingTariff>("/api/admin/billing/tariffs", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateBillingTariff(
+  id: string,
+  data: Partial<{
+    name: string;
+    tagline: string;
+    cpuLabel: string;
+    ramLabel: string;
+    storageLabel: string;
+    extrasLabel: string;
+    dailyRateRub: number;
+    sortOrder: number;
+    isActive: boolean;
+  }>
+) {
+  return apiFetch<BillingTariff>(`/api/admin/billing/tariffs/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteBillingTariff(id: string) {
+  return apiFetch<{ success: boolean }>(`/api/admin/billing/tariffs/${id}`, {
+    method: "DELETE",
   });
 }
