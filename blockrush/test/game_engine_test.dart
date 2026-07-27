@@ -65,10 +65,7 @@ void main() {
       expect(result.linesCleared, 2);
       expect(result.cellsCleared, hasLength(boardSize * 2 - 1));
       expect(engine.board[5].every((cell) => cell == null), isTrue);
-      expect(
-        engine.board.every((row) => row[boardSize - 1] == null),
-        isTrue,
-      );
+      expect(engine.board.every((row) => row[boardSize - 1] == null), isTrue);
     });
   });
 
