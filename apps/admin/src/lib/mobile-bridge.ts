@@ -5,6 +5,7 @@ type SwarkaAdminBridge = {
   onError?: (message: string) => void;
   onLoading?: (loading: boolean) => void;
   onPageScroll?: (scrollY: number) => void;
+  onMenuOpen?: (open: boolean) => void;
   openDialer?: (phone: string) => void;
   openWhatsApp?: (phone: string, text?: string) => void;
   openExternalUrl?: (url: string) => void;
@@ -64,6 +65,10 @@ export function switchAccount(): void {
 
 export function reportMobilePageScroll(scrollY: number): void {
   getBridge()?.onPageScroll?.(Math.max(0, Math.round(scrollY)));
+}
+
+export function reportMobileMenuOpen(open: boolean): void {
+  getBridge()?.onMenuOpen?.(open);
 }
 
 export function openExternalUrl(url: string): void {

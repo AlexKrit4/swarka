@@ -69,6 +69,7 @@ class AdminWebActivity : AppCompatActivity() {
     private var cameraPhotoUri: Uri? = null
     private var connectivityManager: ConnectivityManager? = null
     private var pageScrollY = 0
+    private var menuOpen = false
 
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) {
@@ -322,10 +323,10 @@ class AdminWebActivity : AppCompatActivity() {
     private fun setupSwipeRefresh() {
         swipeRefresh.setColorSchemeResources(R.color.accent_yellow)
         swipeRefresh.setOnChildScrollUpCallback { _, _ ->
-            pageScrollY > 0
+            menuOpen || pageScrollY > 0
         }
         swipeRefresh.setOnRefreshListener {
-            if (pageScrollY > 0) {
+            if (menuOpen || pageScrollY > 0) {
                 swipeRefresh.isRefreshing = false
                 return@setOnRefreshListener
             }
@@ -736,6 +737,17 @@ class AdminWebActivity : AppCompatActivity() {
         @JavascriptInterface
         fun onPageScroll(scrollY: Int) {
             runOnUiThread { pageScrollY = scrollY.coerceAtLeast(0) }
+        }
+
+        @JavascriptInterface
+        fun onMenuOpen(open: Boolean) {
+            runOnUiThread {
+                menuOpen = open
+                swipeRefresh.isEnabled = !open
+                if (open) {
+                    swipeRefresh.isRefreshing = false
+                }
+            }
         }
     }
 
