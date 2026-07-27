@@ -18,7 +18,7 @@ class AppUpdate {
 }
 
 class UpdateService {
-  static const int currentVersionCode = 2;
+  static const int currentVersionCode = 3;
   static final Uri _manifestUrl = Uri.parse(
     'https://swarka-i-voditel.ru/downloads/blockrush-version.json',
   );

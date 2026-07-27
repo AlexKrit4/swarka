@@ -31,7 +31,7 @@ void main() {
       expect(engine.canPlace(single, snapped!.row, snapped.col), isTrue);
     });
 
-    test('holds the previous snap across one cell to avoid jitter', () {
+    test('does not get stuck on the previous preview cell', () {
       final single = piece(const [GridPoint(0, 0)]);
       final engine = GameEngine(initialPieces: [single, single, single]);
 
@@ -42,7 +42,26 @@ void main() {
         previous: const GridPoint(3, 3),
       );
 
-      expect(snapped, const GridPoint(3, 3));
+      expect(snapped, const GridPoint(3, 4));
+    });
+
+    test('strong hold radius finds the nearest placement across the board', () {
+      final board = List.generate(
+        boardSize,
+        (_) => List<int?>.filled(boardSize, 1),
+      );
+      board[0][0] = null;
+      final single = piece(const [GridPoint(0, 0)]);
+      final engine = GameEngine(
+        initialBoard: board,
+        initialPieces: [single, single, single],
+      );
+
+      expect(engine.previewPlacement(single, 7, 7, radius: 2), isNull);
+      expect(
+        engine.previewPlacement(single, 7, 7, radius: boardSize * 2),
+        const GridPoint(0, 0),
+      );
     });
 
     test('centers preview under the pointer independently of pickup', () {

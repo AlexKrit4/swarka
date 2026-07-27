@@ -101,7 +101,7 @@ export default function BlockRushDownloadPage() {
             </span>
           </a>
           <span className="rounded-full border border-[#cfc2b3] bg-white/50 px-4 py-2 text-[10px] font-extrabold tracking-[.16em] text-[#6d645c]">
-            ANDROID · v1.1
+            ANDROID · v1.2
           </span>
         </header>
 

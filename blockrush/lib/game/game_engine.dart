@@ -162,13 +162,6 @@ class GameEngine {
   }) {
     final idealRow = targetRow - piece.height ~/ 2;
     final idealCol = targetCol - piece.width ~/ 2;
-    if (previous != null && canPlace(piece, previous.row, previous.col)) {
-      final rowDelta = previous.row - idealRow;
-      final colDelta = previous.col - idealCol;
-      if (rowDelta * rowDelta + colDelta * colDelta <= 1) {
-        return previous;
-      }
-    }
 
     GridPoint? best;
     var bestScore = 1 << 30;
@@ -183,7 +176,7 @@ class GameEngine {
         final stabilityDistance = previous == null
             ? 0
             : (previous.row - row).abs() + (previous.col - col).abs();
-        final score = distance * 100 + stabilityDistance;
+        final score = distance * 100 + stabilityDistance * 4;
         if (score < bestScore) {
           best = GridPoint(row, col);
           bestScore = score;

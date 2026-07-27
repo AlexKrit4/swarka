@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:blockrush/game/game_engine.dart';
 import 'package:blockrush/services/game_audio.dart';
+import 'package:blockrush/services/leaderboard_service.dart';
 import 'package:blockrush/services/update_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -26,14 +27,21 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> {
   GameEngine _engine = GameEngine();
   final GameAudio _audio = GameAudio();
+  final LeaderboardService _leaderboard = LeaderboardService();
   final UpdateService _updates = UpdateService();
   final Set<GridPoint> _clearing = {};
   Timer? _updateTimer;
+  Timer? _snapTimer;
   SharedPreferences? _preferences;
   int _bestScore = 0;
+  int _snapRadius = 2;
   int? _hoverRow;
   int? _hoverCol;
+  int? _targetRow;
+  int? _targetCol;
   int? _draggedPiece;
+  String _playerId = '';
+  String _playerName = '';
   int _tutorialStep = -1;
   bool _soundEnabled = true;
   bool _hapticsEnabled = true;
@@ -48,9 +56,24 @@ class _GameScreenState extends State<GameScreen> {
   Future<void> _loadPreferences() async {
     final preferences = await SharedPreferences.getInstance();
     if (!mounted) return;
+    var playerId = preferences.getString('leaderboardPlayerId');
+    if (playerId == null) {
+      final random = math.Random.secure();
+      final token = List.generate(
+        20,
+        (_) => random.nextInt(16).toRadixString(16),
+      ).join();
+      playerId = '${DateTime.now().millisecondsSinceEpoch}-$token';
+      await preferences.setString('leaderboardPlayerId', playerId);
+    }
+    final playerName =
+        preferences.getString('leaderboardPlayerName') ??
+        'PLAYER ${playerId.substring(playerId.length - 4).toUpperCase()}';
     setState(() {
       _preferences = preferences;
       _bestScore = preferences.getInt('bestScore') ?? 0;
+      _playerId = playerId!;
+      _playerName = playerName;
       _soundEnabled = preferences.getBool('soundEnabled') ?? true;
       _hapticsEnabled = preferences.getBool('hapticsEnabled') ?? true;
       if (!(preferences.getBool('tutorialComplete') ?? false)) {
@@ -111,6 +134,237 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
+  void _startDragging(int index) {
+    _snapTimer?.cancel();
+    final startedAt = DateTime.now();
+    setState(() {
+      _draggedPiece = index;
+      _snapRadius = 2;
+    });
+    _snapTimer = Timer.periodic(const Duration(milliseconds: 140), (_) {
+      if (!mounted || _draggedPiece == null) return;
+      final heldFor = DateTime.now().difference(startedAt).inMilliseconds;
+      final nextRadius = heldFor < 300
+          ? 2
+          : heldFor < 650
+          ? 3
+          : heldFor < 1050
+          ? 4
+          : boardSize * 2;
+      if (nextRadius != _snapRadius) {
+        setState(() {
+          _snapRadius = nextRadius;
+          _refreshPreview();
+        });
+      }
+    });
+  }
+
+  void _refreshPreview() {
+    final pieceIndex = _draggedPiece;
+    final targetRow = _targetRow;
+    final targetCol = _targetCol;
+    if (pieceIndex == null || targetRow == null || targetCol == null) return;
+    final piece = _engine.pieces[pieceIndex];
+    if (piece == null) return;
+    final origin = _engine.previewPlacement(
+      piece,
+      targetRow,
+      targetCol,
+      radius: _snapRadius,
+      previous: _hoverRow == null || _hoverCol == null
+          ? null
+          : GridPoint(_hoverRow!, _hoverCol!),
+    );
+    if (origin != null) {
+      _hoverRow = origin.row;
+      _hoverCol = origin.col;
+    }
+  }
+
+  void _finishDragging() {
+    _snapTimer?.cancel();
+    setState(() {
+      _draggedPiece = null;
+      _hoverRow = null;
+      _hoverCol = null;
+      _targetRow = null;
+      _targetCol = null;
+      _snapRadius = 2;
+    });
+  }
+
+  Future<void> _submitScore(int score) async {
+    if (score <= 0 || _playerId.isEmpty || _playerName.isEmpty) return;
+    try {
+      await _leaderboard.submit(
+        playerId: _playerId,
+        playerName: _playerName,
+        score: score,
+      );
+    } on Object {
+      // Scores are best-effort and never interrupt offline play.
+    }
+  }
+
+  Future<void> _editPlayerName() async {
+    final controller = TextEditingController(text: _playerName);
+    final value = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFFFFFAF4),
+        title: const Text('PLAYER NAME'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 20,
+          textCapitalization: TextCapitalization.characters,
+          decoration: const InputDecoration(
+            hintText: 'Your name',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCEL'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final name = controller.text.trim().replaceAll(
+                RegExp(r'[^a-zA-Zа-яА-ЯёЁ0-9 _.-]'),
+                '',
+              );
+              if (name.length >= 2) Navigator.pop(context, name);
+            },
+            child: const Text('SAVE'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (value == null || !mounted) return;
+    setState(() => _playerName = value);
+    await _preferences?.setString('leaderboardPlayerName', value);
+    await _submitScore(_bestScore);
+  }
+
+  Future<void> _showLeaderboard() async {
+    final scores = _leaderboard.fetch();
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFFFFFAF4),
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.sizeOf(context).height * 0.72,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 2, 20, 18),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.emoji_events_rounded,
+                      color: Color(0xFFD5A33E),
+                    ),
+                    const SizedBox(width: 9),
+                    const Text(
+                      'GLOBAL LEADERBOARD',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.1,
+                      ),
+                    ),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        await _editPlayerName();
+                        if (mounted) unawaited(_showLeaderboard());
+                      },
+                      child: Text(_playerName),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: FutureBuilder<List<LeaderboardEntry>>(
+                    future: scores,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState != ConnectionState.done) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (snapshot.hasError) {
+                        return const Center(
+                          child: Text(
+                            'Leaderboard is temporarily unavailable.',
+                            textAlign: TextAlign.center,
+                          ),
+                        );
+                      }
+                      final entries = snapshot.data ?? const [];
+                      if (entries.isEmpty) {
+                        return const Center(
+                          child: Text('Be the first player on the board.'),
+                        );
+                      }
+                      return ListView.separated(
+                        itemCount: entries.length,
+                        separatorBuilder: (_, index) =>
+                            const Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          final entry = entries[index];
+                          final isCurrent = entry.playerId == _playerId;
+                          return ListTile(
+                            tileColor: isCurrent
+                                ? const Color(0x17C96B4B)
+                                : null,
+                            leading: SizedBox(
+                              width: 30,
+                              child: Text(
+                                '#${index + 1}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  color: index < 3
+                                      ? const Color(0xFFB87916)
+                                      : const Color(0xFF82786E),
+                                ),
+                              ),
+                            ),
+                            title: Text(
+                              entry.playerName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontWeight: isCurrent
+                                    ? FontWeight.w900
+                                    : FontWeight.w700,
+                              ),
+                            ),
+                            trailing: Text(
+                              '${entry.score}',
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _place(int pieceIndex, int row, int col) async {
     final result = _engine.place(pieceIndex, row, col);
     if (!result.placed) {
@@ -157,6 +411,7 @@ class _GameScreenState extends State<GameScreen> {
       _draggedPiece = null;
     });
     if (result.gameOver) {
+      unawaited(_submitScore(_engine.score));
       if (_soundEnabled) unawaited(_audio.playGameOver());
       Future<void>.delayed(const Duration(milliseconds: 450), () {
         if (mounted) _showGameOver();
@@ -336,7 +591,7 @@ class _GameScreenState extends State<GameScreen> {
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.system_update_rounded),
                   title: const Text('Check for updates'),
-                  subtitle: const Text('Installed: 1.1.0'),
+                  subtitle: const Text('Installed: 1.2.0'),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () {
                     Navigator.pop(context);
@@ -354,6 +609,7 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void dispose() {
     _updateTimer?.cancel();
+    _snapTimer?.cancel();
     unawaited(_audio.dispose());
     super.dispose();
   }
@@ -384,10 +640,18 @@ class _GameScreenState extends State<GameScreen> {
                         draggedPiece: _draggedPiece,
                         hoverRow: _hoverRow,
                         hoverCol: _hoverCol,
-                        onHover: (row, col) => setState(() {
-                          _hoverRow = row;
-                          _hoverCol = col;
-                        }),
+                        snapRadius: _snapRadius,
+                        onTarget: (row, col) {
+                          _targetRow = row;
+                          _targetCol = col;
+                        },
+                        onHover: (row, col, targetRow, targetCol) =>
+                            setState(() {
+                              _hoverRow = row;
+                              _hoverCol = col;
+                              _targetRow = targetRow;
+                              _targetCol = targetCol;
+                            }),
                         onPlace: _place,
                       ),
                     ),
@@ -417,13 +681,8 @@ class _GameScreenState extends State<GameScreen> {
                               piece: _engine.pieces[index],
                               index: index,
                               enabled: !_engine.gameOver,
-                              onDragStarted: () =>
-                                  setState(() => _draggedPiece = index),
-                              onDragEnded: () => setState(() {
-                                _draggedPiece = null;
-                                _hoverRow = null;
-                                _hoverCol = null;
-                              }),
+                              onDragStarted: () => _startDragging(index),
+                              onDragEnded: _finishDragging,
                             ),
                           ),
                         ),
@@ -467,12 +726,18 @@ class _GameScreenState extends State<GameScreen> {
         const Text(
           'BLOCKRUSH',
           style: TextStyle(
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: FontWeight.w900,
-            letterSpacing: 1.8,
+            letterSpacing: 1.4,
           ),
         ),
         const Spacer(),
+        _RoundButton(
+          icon: Icons.emoji_events_rounded,
+          tooltip: 'Leaderboard',
+          onTap: _showLeaderboard,
+        ),
+        const SizedBox(width: 8),
         _RoundButton(
           icon: Icons.refresh_rounded,
           tooltip: 'Restart',
@@ -559,6 +824,8 @@ class _GameBoard extends StatelessWidget {
     required this.draggedPiece,
     required this.hoverRow,
     required this.hoverCol,
+    required this.snapRadius,
+    required this.onTarget,
     required this.onHover,
     required this.onPlace,
   });
@@ -568,7 +835,9 @@ class _GameBoard extends StatelessWidget {
   final int? draggedPiece;
   final int? hoverRow;
   final int? hoverCol;
-  final void Function(int row, int col) onHover;
+  final int snapRadius;
+  final void Function(int row, int col) onTarget;
+  final void Function(int row, int col, int targetRow, int targetCol) onHover;
   final Future<void> Function(int piece, int row, int col) onPlace;
 
   bool _isPreviewCell(int row, int col) {
@@ -619,25 +888,34 @@ class _GameBoard extends StatelessWidget {
               onWillAcceptWithDetails: (details) {
                 final piece = engine.pieces[details.data];
                 if (piece == null) return false;
+                onTarget(row, col);
                 final origin = engine.previewPlacement(
                   piece,
                   row,
                   col,
+                  radius: snapRadius,
                   previous: hoverRow == null || hoverCol == null
                       ? null
                       : GridPoint(hoverRow!, hoverCol!),
                 );
                 if (origin == null) return false;
-                onHover(origin.row, origin.col);
+                onHover(origin.row, origin.col, row, col);
                 return true;
               },
               onAcceptWithDetails: (details) {
                 final piece = engine.pieces[details.data];
                 if (piece == null) return;
+                if (hoverRow != null &&
+                    hoverCol != null &&
+                    engine.canPlace(piece, hoverRow!, hoverCol!)) {
+                  onPlace(details.data, hoverRow!, hoverCol!);
+                  return;
+                }
                 final origin = engine.previewPlacement(
                   piece,
                   row,
                   col,
+                  radius: snapRadius,
                   previous: hoverRow == null || hoverCol == null
                       ? null
                       : GridPoint(hoverRow!, hoverCol!),
@@ -656,10 +934,28 @@ class _GameBoard extends StatelessWidget {
                       ? _pieceColors[colorIndex]
                       : isPreview
                       ? _pieceColors[engine.pieces[draggedPiece!]!.colorIndex]
-                            .withValues(alpha: 0.52)
+                            .withValues(alpha: 0.64)
                       : const Color(0xFFE8E0D4),
                   borderRadius: BorderRadius.circular(5),
-                  boxShadow: colorIndex != null || isClearing
+                  border: isPreview
+                      ? Border.all(
+                          color: Colors.white.withValues(alpha: 0.82),
+                          width: 1.2,
+                        )
+                      : null,
+                  boxShadow: isPreview
+                      ? [
+                          BoxShadow(
+                            color:
+                                _pieceColors[engine
+                                        .pieces[draggedPiece!]!
+                                        .colorIndex]
+                                    .withValues(alpha: 0.32),
+                            blurRadius: 9,
+                            spreadRadius: 1,
+                          ),
+                        ]
+                      : colorIndex != null || isClearing
                       ? [
                           BoxShadow(
                             color:
@@ -721,30 +1017,21 @@ class _PieceDock extends StatelessWidget {
         if (!enabled) return Opacity(opacity: 0.4, child: dock);
         return Draggable<int>(
           data: index,
-          dragAnchorStrategy: (draggable, dragContext, globalPosition) {
-            final box = dragContext.findRenderObject()! as RenderBox;
-            final local = box.globalToLocal(globalPosition);
-            final shapeWidth = piece!.width * dockCellSize;
-            final shapeHeight = piece!.height * dockCellSize;
-            final shapeLeft = (box.size.width - shapeWidth) / 2;
-            final shapeTop = (box.size.height - shapeHeight) / 2;
-            final grabbedX = (local.dx - shapeLeft)
-                .clamp(0.0, shapeWidth)
-                .toDouble();
-            final grabbedY = (local.dy - shapeTop)
-                .clamp(0.0, shapeHeight)
-                .toDouble();
-            final scale = feedbackCellSize / dockCellSize;
-            return Offset(grabbedX * scale, grabbedY * scale);
-          },
+          dragAnchorStrategy: pointerDragAnchorStrategy,
           onDragStarted: onDragStarted,
           onDragEnd: (_) => onDragEnded(),
           feedback: Material(
             color: Colors.transparent,
-            child: _PieceView(
-              piece: piece!,
-              cellSize: feedbackCellSize,
-              elevated: true,
+            child: Transform.translate(
+              offset: Offset(
+                -piece!.width * feedbackCellSize / 2,
+                -piece!.height * feedbackCellSize / 2,
+              ),
+              child: _PieceView(
+                piece: piece!,
+                cellSize: feedbackCellSize,
+                elevated: true,
+              ),
             ),
           ),
           childWhenDragging: Opacity(opacity: 0.16, child: dock),

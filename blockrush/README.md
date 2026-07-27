@@ -22,6 +22,7 @@ The game includes:
 - finger-centered placement preview with a forgiving two-cell search radius
 - pickup-point-preserving drag feedback and snap stability
 - automatic update checks backed by the website's APK manifest
+- PostgreSQL-backed global leaderboard with persistent player identity
 - placement previews, clear animation, score animation, and combo feedback
 - locally persisted best score
 - first-run, three-step tutorial that can be replayed in Settings
