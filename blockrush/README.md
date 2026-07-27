@@ -19,7 +19,8 @@ does not clear a line resets it.
 The game includes:
 
 - five warm block colors and thirty shape orientations (1–5 cells)
-- forgiving magnetic placement with a two-cell search radius and snap stability
+- forgiving magnetic placement where any piece cell can meet the pointer
+- lifted drag feedback, two-cell search radius, and snap stability
 - placement previews, clear animation, score animation, and combo feedback
 - locally persisted best score
 - first-run, three-step tutorial that can be replayed in Settings

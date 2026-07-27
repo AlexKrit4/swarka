@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:blockrush/game/game_engine.dart';
 import 'package:blockrush/services/game_audio.dart';
@@ -502,10 +503,6 @@ class _GameBoard extends StatelessWidget {
   final void Function(int row, int col) onHover;
   final Future<void> Function(int piece, int row, int col) onPlace;
 
-  GridPoint _originFor(GamePiece piece, int row, int col) {
-    return GridPoint(row - piece.height ~/ 2, col - piece.width ~/ 2);
-  }
-
   bool _isPreviewCell(int row, int col) {
     if (draggedPiece == null || hoverRow == null || hoverCol == null) {
       return false;
@@ -554,11 +551,10 @@ class _GameBoard extends StatelessWidget {
               onWillAcceptWithDetails: (details) {
                 final piece = engine.pieces[details.data];
                 if (piece == null) return false;
-                final ideal = _originFor(piece, row, col);
-                final origin = engine.nearestPlacement(
+                final origin = engine.relaxedPlacement(
                   piece,
-                  ideal.row,
-                  ideal.col,
+                  row,
+                  col,
                   previous: hoverRow == null || hoverCol == null
                       ? null
                       : GridPoint(hoverRow!, hoverCol!),
@@ -570,11 +566,10 @@ class _GameBoard extends StatelessWidget {
               onAcceptWithDetails: (details) {
                 final piece = engine.pieces[details.data];
                 if (piece == null) return;
-                final ideal = _originFor(piece, row, col);
-                final origin = engine.nearestPlacement(
+                final origin = engine.relaxedPlacement(
                   piece,
-                  ideal.row,
-                  ideal.col,
+                  row,
+                  col,
                   previous: hoverRow == null || hoverCol == null
                       ? null
                       : GridPoint(hoverRow!, hoverCol!),
@@ -636,35 +631,51 @@ class _PieceDock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (piece == null) return const SizedBox.expand();
-    const feedbackCellSize = 39.0;
-    final widthCellSize = 104 / piece!.width;
-    final heightCellSize = 110 / piece!.height;
-    final dockCellSize = widthCellSize < heightCellSize
-        ? (widthCellSize < 32 ? widthCellSize : 32.0)
-        : (heightCellSize < 32 ? heightCellSize : 32.0);
-    final preview = _PieceView(piece: piece!, cellSize: dockCellSize);
-    if (!enabled) return Opacity(opacity: 0.4, child: preview);
-    return Draggable<int>(
-      data: index,
-      dragAnchorStrategy: pointerDragAnchorStrategy,
-      onDragStarted: onDragStarted,
-      onDragEnd: (_) => onDragEnded(),
-      feedback: Material(
-        color: Colors.transparent,
-        child: Transform.translate(
-          offset: Offset(
-            -piece!.width * feedbackCellSize / 2,
-            -piece!.height * feedbackCellSize / 2,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const feedbackCellSize = 41.0;
+        const lift = 64.0;
+        final dockCellSize = math.min(
+          36.0,
+          math.min(
+            (constraints.maxWidth - 10) / piece!.width,
+            (constraints.maxHeight - 10) / piece!.height,
           ),
-          child: _PieceView(
-            piece: piece!,
-            cellSize: feedbackCellSize,
-            elevated: true,
+        );
+        final preview = _PieceView(piece: piece!, cellSize: dockCellSize);
+        final dock = DecoratedBox(
+          decoration: BoxDecoration(
+            color: const Color(0x66FFFAF4),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: const Color(0x125F554B)),
           ),
-        ),
-      ),
-      childWhenDragging: Opacity(opacity: 0.18, child: preview),
-      child: SizedBox.expand(child: preview),
+          child: preview,
+        );
+        if (!enabled) return Opacity(opacity: 0.4, child: dock);
+        return Draggable<int>(
+          data: index,
+          dragAnchorStrategy: pointerDragAnchorStrategy,
+          feedbackOffset: const Offset(0, -lift),
+          onDragStarted: onDragStarted,
+          onDragEnd: (_) => onDragEnded(),
+          feedback: Material(
+            color: Colors.transparent,
+            child: Transform.translate(
+              offset: Offset(
+                -piece!.width * feedbackCellSize / 2,
+                -piece!.height * feedbackCellSize / 2 - lift,
+              ),
+              child: _PieceView(
+                piece: piece!,
+                cellSize: feedbackCellSize,
+                elevated: true,
+              ),
+            ),
+          ),
+          childWhenDragging: Opacity(opacity: 0.16, child: dock),
+          child: dock,
+        );
+      },
     );
   }
 }
