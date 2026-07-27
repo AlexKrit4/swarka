@@ -1,6 +1,6 @@
 import 'dart:math';
 
-const int boardSize = 10;
+const int boardSize = 8;
 
 class GridPoint {
   const GridPoint(this.row, this.col);

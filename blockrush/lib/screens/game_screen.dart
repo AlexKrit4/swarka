@@ -508,6 +508,10 @@ class _GameBoard extends StatelessWidget {
   final VoidCallback onLeave;
   final Future<void> Function(int piece, int row, int col) onPlace;
 
+  GridPoint _originFor(GamePiece piece, int row, int col) {
+    return GridPoint(row - piece.height ~/ 2, col - piece.width ~/ 2);
+  }
+
   bool _isPreviewCell(int row, int col) {
     if (draggedPiece == null || hoverRow == null || hoverCol == null) {
       return false;
@@ -555,12 +559,17 @@ class _GameBoard extends StatelessWidget {
             return DragTarget<int>(
               onWillAcceptWithDetails: (details) {
                 final piece = engine.pieces[details.data];
-                onHover(row, col);
-                return piece != null && engine.canPlace(piece, row, col);
+                if (piece == null) return false;
+                final origin = _originFor(piece, row, col);
+                onHover(origin.row, origin.col);
+                return engine.canPlace(piece, origin.row, origin.col);
               },
               onLeave: (_) => onLeave(),
               onAcceptWithDetails: (details) {
-                onPlace(details.data, row, col);
+                final piece = engine.pieces[details.data];
+                if (piece == null) return;
+                final origin = _originFor(piece, row, col);
+                onPlace(details.data, origin.row, origin.col);
               },
               builder: (context, candidates, rejects) => AnimatedContainer(
                 duration: const Duration(milliseconds: 160),
@@ -616,23 +625,30 @@ class _PieceDock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (piece == null) return const SizedBox.expand();
-    final preview = _PieceView(piece: piece!, cellSize: 21);
+    const feedbackCellSize = 34.0;
+    final preview = _PieceView(piece: piece!, cellSize: 27);
     if (!enabled) return Opacity(opacity: 0.4, child: preview);
-    return LongPressDraggable<int>(
+    return Draggable<int>(
       data: index,
-      delay: const Duration(milliseconds: 90),
       dragAnchorStrategy: pointerDragAnchorStrategy,
       onDragStarted: onDragStarted,
       onDragEnd: (_) => onDragEnded(),
       feedback: Material(
         color: Colors.transparent,
         child: Transform.translate(
-          offset: const Offset(-12, -55),
-          child: _PieceView(piece: piece!, cellSize: 27, elevated: true),
+          offset: Offset(
+            -piece!.width * feedbackCellSize / 2,
+            -piece!.height * feedbackCellSize / 2,
+          ),
+          child: _PieceView(
+            piece: piece!,
+            cellSize: feedbackCellSize,
+            elevated: true,
+          ),
         ),
       ),
       childWhenDragging: Opacity(opacity: 0.18, child: preview),
-      child: preview,
+      child: SizedBox.expand(child: preview),
     );
   }
 }

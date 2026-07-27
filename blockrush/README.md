@@ -1,7 +1,7 @@
 # BlockRush
 
 BlockRush is a portrait-only, native Android block puzzle built with Flutter.
-Place shapes on a 10×10 board, complete rows or columns, and chain clears to
+Place shapes on an 8×8 board, complete rows or columns, and chain clears to
 build a score multiplier. This project intentionally has no web/PWA target.
 
 ## Gameplay

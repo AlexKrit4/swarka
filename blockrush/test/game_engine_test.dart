@@ -21,7 +21,7 @@ void main() {
       expect(engine.place(0, 4, 4).placed, isTrue);
       expect(engine.board[4][4], 0);
       expect(engine.place(1, 4, 4).placed, isFalse);
-      expect(engine.place(1, 10, 0).placed, isFalse);
+      expect(engine.place(1, boardSize, 0).placed, isFalse);
       expect(engine.score, 10);
     });
   });
@@ -39,7 +39,7 @@ void main() {
         initialPieces: [single, single, single],
       );
 
-      final result = engine.place(0, 2, 9);
+      final result = engine.place(0, 2, boardSize - 1);
 
       expect(result.linesCleared, 1);
       expect(engine.board[2].every((cell) => cell == null), isTrue);
@@ -52,7 +52,7 @@ void main() {
         board[5][col] = 1;
       }
       for (var row = 0; row < boardSize; row++) {
-        if (row != 5) board[row][9] = 1;
+        if (row != 5) board[row][boardSize - 1] = 1;
       }
       final single = piece(const [GridPoint(0, 0)]);
       final engine = GameEngine(
@@ -60,12 +60,15 @@ void main() {
         initialPieces: [single, single, single],
       );
 
-      final result = engine.place(0, 5, 9);
+      final result = engine.place(0, 5, boardSize - 1);
 
       expect(result.linesCleared, 2);
-      expect(result.cellsCleared, hasLength(19));
+      expect(result.cellsCleared, hasLength(boardSize * 2 - 1));
       expect(engine.board[5].every((cell) => cell == null), isTrue);
-      expect(engine.board.every((row) => row[9] == null), isTrue);
+      expect(
+        engine.board.every((row) => row[boardSize - 1] == null),
+        isTrue,
+      );
     });
   });
 

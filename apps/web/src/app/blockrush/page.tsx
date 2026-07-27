@@ -150,7 +150,7 @@ export default function BlockRushDownloadPage() {
 
             <div className="mt-10 grid max-w-lg grid-cols-3 border-y border-[#d8ccbd] py-5">
               {[
-                ["10 × 10", "поле"],
+                ["8 × 8", "поле"],
                 ["14", "фигур"],
                 ["OFFLINE", "без сети"],
               ].map(([value, label]) => (
