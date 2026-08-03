@@ -7,6 +7,10 @@ export type AuthUser = {
   role: string;
 };
 
+export function canEdit(role: string): boolean {
+  return role === "SUPER_ADMIN" || role === "ADMIN";
+}
+
 export async function requireAuth(request: FastifyRequest, reply: FastifyReply) {
   try {
     const authHeader = request.headers.authorization;
@@ -20,6 +24,18 @@ export async function requireAuth(request: FastifyRequest, reply: FastifyReply) 
   } catch {
     return reply.status(401).send({ error: "Unauthorized" });
   }
+}
+
+export async function requireEditor(request: FastifyRequest, reply: FastifyReply) {
+  await requireAuth(request, reply);
+  if (reply.sent) return;
+
+  const payload = request.user as AuthUser;
+  const user = await prisma.user.findUnique({ where: { id: payload.id } });
+  if (!user || !canEdit(user.role)) {
+    return reply.status(403).send({ error: "Read-only access" });
+  }
+  request.user = { id: user.id, email: user.email, role: user.role };
 }
 
 export async function requireSuperAdmin(request: FastifyRequest, reply: FastifyReply) {
