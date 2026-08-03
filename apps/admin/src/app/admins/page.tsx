@@ -10,17 +10,22 @@ import {
   deleteAdmin,
   type AdminAccount,
 } from "@/lib/api";
+import { getRoleLabel, SUB_ADMIN_ROLE_OPTIONS, type SubAdminRole } from "@/lib/permissions";
+import { notifySaved } from "@/lib/mobile-bridge";
+
+type EditingAdmin = {
+  id?: string;
+  email: string;
+  name: string;
+  password: string;
+  role: SubAdminRole;
+};
 
 function AdminsContent() {
   const router = useRouter();
   const me = useAdminUser();
   const [items, setItems] = useState<AdminAccount[]>([]);
-  const [editing, setEditing] = useState<{
-    id?: string;
-    email: string;
-    name: string;
-    password: string;
-  } | null>(null);
+  const [editing, setEditing] = useState<EditingAdmin | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -46,6 +51,7 @@ function AdminsContent() {
         await updateAdmin(editing.id, {
           email: editing.email,
           name: editing.name || null,
+          role: editing.role,
           ...(editing.password ? { password: editing.password } : {}),
         });
       } else {
@@ -57,17 +63,18 @@ function AdminsContent() {
           email: editing.email,
           password: editing.password,
           name: editing.name || undefined,
+          role: editing.role,
         });
       }
       setEditing(null);
       load();
+      notifySaved();
     } catch (e) {
       setError((e as Error).message || "Ошибка сохранения");
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Удалить подадмина?")) return;
     try {
       await deleteAdmin(id);
       load();
@@ -82,14 +89,16 @@ function AdminsContent() {
         <div>
           <h1 className="text-2xl font-bold">Админы</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Логин может быть любым (не только почта). Подадмины имеют те же права на
-            контент. Управлять ими можете только вы.
+            Логин может быть любым (не только почта). Роль «Все права» — полный доступ,
+            «Наблюдатель» — только просмотр без изменений.
           </p>
         </div>
         <button
           type="button"
           className="btn-primary"
-          onClick={() => setEditing({ email: "", name: "", password: "" })}
+          onClick={() =>
+            setEditing({ email: "", name: "", password: "", role: "ADMIN" })
+          }
         >
           + Добавить
         </button>
@@ -111,6 +120,18 @@ function AdminsContent() {
             value={editing.name}
             onChange={(e) => setEditing({ ...editing, name: e.target.value })}
           />
+          <select
+            value={editing.role}
+            onChange={(e) =>
+              setEditing({ ...editing, role: e.target.value as SubAdminRole })
+            }
+          >
+            {SUB_ADMIN_ROLE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
           <input
             type="password"
             placeholder={editing.id ? "Новый пароль (если меняете)" : "Пароль"}
@@ -134,7 +155,7 @@ function AdminsContent() {
             <div>
               <p className="font-semibold">{item.email}</p>
               <p className="text-sm text-gray-500">
-                {item.name || "—"} · {item.role === "SUPER_ADMIN" ? "Главный" : "Подадмин"}
+                {item.name || "—"} · {getRoleLabel(item.role)}
               </p>
             </div>
             {item.role !== "SUPER_ADMIN" && (
@@ -148,6 +169,7 @@ function AdminsContent() {
                       email: item.email,
                       name: item.name ?? "",
                       password: "",
+                      role: item.role === "VIEWER" ? "VIEWER" : "ADMIN",
                     })
                   }
                 >
