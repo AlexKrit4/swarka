@@ -1,6 +1,7 @@
 "use client";
 
 import type { Service } from "@/lib/types";
+import type { SiteContent } from "@swarka/shared";
 import { resolveImageUrl } from "@/lib/api";
 import { SmartImage } from "./SmartImage";
 import { SectionHeading } from "./SectionHeading";
@@ -21,16 +22,17 @@ const SERVICE_FALLBACKS = [
 
 interface ServicesProps {
   services: Service[];
+  content: SiteContent["services"];
 }
 
-export function Services({ services }: ServicesProps) {
+export function Services({ services, content }: ServicesProps) {
   return (
     <section id="services" className="relative py-20 lg:py-28 bg-paper metal-grid">
       <div className="max-w-7xl mx-auto px-4 lg:px-8">
         <SectionHeading
-          eyebrow="Каталог"
-          title="Услуги"
-          subtitle="Изготовление и монтаж металлоконструкций под ключ"
+          eyebrow={content.eyebrow}
+          title={content.title}
+          subtitle={content.subtitle}
         />
 
         <Stagger className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6">
@@ -63,18 +65,19 @@ export function Services({ services }: ServicesProps) {
                   </p>
                   {service.priceFrom != null ? (
                     <p className="font-display text-xl font-medium text-accent mb-3">
-                      от {service.priceFrom.toLocaleString("ru-RU")} ₽
+                      {content.priceFromPrefix}{" "}
+                      {service.priceFrom.toLocaleString("ru-RU")} ₽
                     </p>
                   ) : (
                     <p className="font-display text-xl font-medium text-accent mb-3">
-                      Договорная
+                      {content.priceNegotiable}
                     </p>
                   )}
                   <a
                     href="#contact"
                     className="inline-flex items-center gap-2 text-sm font-semibold text-ink hover:text-accent transition-colors"
                   >
-                    Заказать расчёт
+                    {content.orderCta}
                     <ArrowIcon className="w-4 h-4" />
                   </a>
                 </div>
