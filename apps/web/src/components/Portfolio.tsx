@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import type { PortfolioItem } from "@/lib/types";
+import type { SiteContent } from "@swarka/shared";
 import { resolveImageUrl } from "@/lib/api";
 import { SmartImage } from "./SmartImage";
 import { SectionHeading } from "./SectionHeading";
@@ -21,9 +22,10 @@ const PORTFOLIO_FALLBACKS = [
 
 interface PortfolioProps {
   items: PortfolioItem[];
+  content: SiteContent["portfolio"];
 }
 
-export function Portfolio({ items }: PortfolioProps) {
+export function Portfolio({ items, content }: PortfolioProps) {
   const [lightbox, setLightbox] = useState<PortfolioItem | null>(null);
   const lightboxRef = useRef<HTMLDivElement>(null);
 
@@ -46,9 +48,9 @@ export function Portfolio({ items }: PortfolioProps) {
       <div className="absolute inset-0 metal-grid opacity-20 pointer-events-none" />
       <div className="relative max-w-7xl mx-auto px-4 lg:px-8">
         <SectionHeading
-          eyebrow="Портфолио"
-          title="Наши работы"
-          subtitle="Реализованные проекты в Москве и области"
+          eyebrow={content.eyebrow}
+          title={content.title}
+          subtitle={content.subtitle}
           light
         />
 
@@ -89,7 +91,7 @@ export function Portfolio({ items }: PortfolioProps) {
 
         <div className="text-center mt-12">
           <MagneticButton href="#contact" className="btn-accent px-8 py-3.5 text-sm">
-            Хочу так же — оставить заявку
+            {content.cta}
           </MagneticButton>
         </div>
       </div>
@@ -121,7 +123,7 @@ export function Portfolio({ items }: PortfolioProps) {
                 className="inline-block mt-5 btn-accent px-6 py-2.5 text-sm"
                 onClick={() => setLightbox(null)}
               >
-                Хочу так же
+                {content.lightboxCta}
               </a>
             </div>
             <button
