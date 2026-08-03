@@ -1,10 +1,13 @@
-import type { SiteSettings } from "@/lib/types";
+import type { SiteContent, SiteSettings } from "@/lib/types";
 
 interface JsonLdProps {
   settings: SiteSettings;
+  content: SiteContent;
 }
 
-export function JsonLd({ settings }: JsonLdProps) {
+export function JsonLd({ settings, content }: JsonLdProps) {
+  const jsonLd = content.jsonLd;
+
   const data = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
@@ -16,19 +19,20 @@ export function JsonLd({ settings }: JsonLdProps) {
       "@type": "GeoCircle",
       geoMidpoint: {
         "@type": "GeoCoordinates",
-        latitude: 55.7558,
-        longitude: 37.6173,
+        latitude: jsonLd.latitude,
+        longitude: jsonLd.longitude,
       },
-      geoRadius: "100000",
+      geoRadius: jsonLd.geoRadius,
     },
     address: {
       "@type": "PostalAddress",
-      addressLocality: "Москва",
-      addressRegion: "Московская область",
+      streetAddress: settings.address ?? undefined,
+      addressLocality: jsonLd.addressLocality,
+      addressRegion: jsonLd.addressRegion,
       addressCountry: "RU",
     },
-    priceRange: "$$",
-    openingHours: "Mo-Sa 09:00-20:00",
+    priceRange: jsonLd.priceRange,
+    openingHours: jsonLd.openingHours,
   };
 
   return (

@@ -2,22 +2,16 @@
 
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
-import type { SiteSettings } from "@/lib/types";
+import type { SiteContent, SiteSettings } from "@/lib/types";
 import { ArrowIcon } from "./ArrowIcon";
 import { MagneticButton } from "./MagneticButton";
 
-const NAV_ITEMS = [
-  { label: "Услуги", href: "#services" },
-  { label: "Работы", href: "#portfolio" },
-  { label: "Акции", href: "#promo" },
-  { label: "Контакты", href: "#contact" },
-];
-
 interface HeaderProps {
   settings: SiteSettings;
+  content: SiteContent;
 }
 
-export function Header({ settings }: HeaderProps) {
+export function Header({ settings, content }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
@@ -64,9 +58,9 @@ export function Header({ settings }: HeaderProps) {
           </a>
 
           <nav className="hidden lg:flex items-center gap-8 text-[0.8rem] font-semibold uppercase tracking-[0.16em] text-white/55">
-            {NAV_ITEMS.map((item) => (
+            {content.nav.map((item) => (
               <a
-                key={item.href}
+                key={`${item.href}-${item.label}`}
                 href={item.href}
                 className="hover:text-white transition-colors relative after:absolute after:-bottom-1 after:left-0 after:h-px after:w-0 after:bg-accent after:transition-all hover:after:w-full"
               >
@@ -112,7 +106,7 @@ export function Header({ settings }: HeaderProps) {
               href="#contact"
               className="btn-accent hidden sm:inline-flex text-sm px-4 py-2.5"
             >
-              Заявка
+              {content.header.ctaLabel}
               <ArrowIcon className="w-4 h-4" />
             </MagneticButton>
             <button
@@ -138,9 +132,9 @@ export function Header({ settings }: HeaderProps) {
 
         {menuOpen && (
           <nav className="lg:hidden pb-5 flex flex-col gap-3 border-t border-white/10 pt-4">
-            {NAV_ITEMS.map((item) => (
+            {content.nav.map((item) => (
               <a
-                key={item.href}
+                key={`mobile-${item.href}-${item.label}`}
                 href={item.href}
                 className="text-sm font-semibold uppercase tracking-[0.14em] text-white/70 hover:text-white"
                 onClick={() => setMenuOpen(false)}
@@ -160,7 +154,7 @@ export function Header({ settings }: HeaderProps) {
               className="btn-accent text-sm px-4 py-2.5 w-fit"
               onClick={() => setMenuOpen(false)}
             >
-              Оставить заявку
+              {content.header.mobileMenuCta}
             </a>
           </nav>
         )}
