@@ -69,7 +69,7 @@ function PortfolioContent() {
             {item.tag && <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">{item.tag}</span>}
             <div className="flex gap-2 mt-3">
               <button type="button" className="text-sm underline" onClick={() => setEditing(item)}>Изменить</button>
-              <button type="button" className="btn-danger" onClick={async () => { if (confirm("Удалить?")) { await deletePortfolio(item.id); load(); } }}>Удалить</button>
+              <button type="button" className="btn-danger" onClick={async () => { await deletePortfolio(item.id); load(); }}>Удалить</button>
             </div>
           </div>
         ))}

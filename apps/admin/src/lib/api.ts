@@ -77,6 +77,7 @@ export async function createAdmin(data: {
   email: string;
   password: string;
   name?: string;
+  role?: "ADMIN" | "VIEWER";
 }) {
   return apiFetch<AdminAccount>("/api/admin/users", {
     method: "POST",
@@ -86,7 +87,7 @@ export async function createAdmin(data: {
 
 export async function updateAdmin(
   id: string,
-  data: { email?: string; password?: string; name?: string | null }
+  data: { email?: string; password?: string; name?: string | null; role?: "ADMIN" | "VIEWER" }
 ) {
   return apiFetch<AdminAccount>(`/api/admin/users/${id}`, {
     method: "PUT",
@@ -177,6 +178,8 @@ export interface SiteSettings {
   seoDescription: string | null;
   yandexMetrikaId: string | null;
   whyUsJson: string | null;
+  contentJson: string | null;
+  privacyContent: string | null;
   address: string | null;
   workZone: string;
 }
@@ -299,6 +302,49 @@ export async function updateLead(id: string, data: { status?: string; note?: str
 
 export async function deleteLead(id: string) {
   return apiFetch(`/api/admin/leads/${id}`, { method: "DELETE" });
+}
+
+export interface ChangeLogItem {
+  id: string;
+  userId: string | null;
+  userEmail: string | null;
+  entityType: string;
+  entityId: string | null;
+  action: string;
+  label: string;
+  beforeJson: string | null;
+  afterJson: string | null;
+  createdAt: string;
+}
+
+export interface SiteSnapshotItem {
+  id: string;
+  label: string | null;
+  userEmail: string | null;
+  createdAt: string;
+}
+
+export async function getChangelog() {
+  return apiFetch<ChangeLogItem[]>("/api/admin/changelog");
+}
+
+export async function getSnapshots() {
+  return apiFetch<SiteSnapshotItem[]>("/api/admin/snapshots");
+}
+
+export async function createSnapshot(label?: string) {
+  return apiFetch("/api/admin/snapshots", {
+    method: "POST",
+    body: JSON.stringify({ label }),
+  });
+}
+
+export async function restoreChangelog(id: string) {
+  return apiFetch(`/api/admin/changelog/${id}/restore`, { method: "POST" });
+}
+
+export async function restoreSnapshot(id: string) {
+  return apiFetch(`/api/admin/snapshots/${id}/restore`, { method: "POST" });
 }
 
 export async function uploadFile(file: File): Promise<{ url: string }> {

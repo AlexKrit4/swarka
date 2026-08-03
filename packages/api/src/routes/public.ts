@@ -1,6 +1,9 @@
 import type { FastifyInstance } from "fastify";
+import { createReadStream, existsSync } from "node:fs";
+import { join } from "node:path";
 import { prisma } from "@swarka/database";
 import { sendTelegramNotification } from "../lib/telegram.js";
+import { getMobileAppVersionInfo } from "../lib/mobile-app.js";
 import { z } from "zod";
 
 const leadSchema = z.object({
@@ -13,6 +16,38 @@ const leadSchema = z.object({
 
 export async function publicRoutes(app: FastifyInstance) {
   app.get("/api/health", async () => ({ status: "ok" }));
+
+  app.get("/api/mobile/accounts", async () => {
+    return prisma.user.findMany({
+      where: { role: { in: ["ADMIN", "VIEWER"] } },
+      select: { id: true, email: true, name: true },
+      orderBy: { createdAt: "asc" },
+    });
+  });
+
+  app.get("/api/mobile/app-version", async () => getMobileAppVersionInfo());
+
+  app.get("/api/mobile/app-download", async (request, reply) => {
+    const candidates = [
+      process.env.MOBILE_APP_APK_PATH,
+      "/app/mobile/SWARKA-Admin.apk",
+      join(process.cwd(), "..", "..", "mobile", "SWARKA-Admin.apk"),
+      join(process.cwd(), "..", "..", "releases", "SWARKA-Admin.apk"),
+    ].filter(Boolean) as string[];
+
+    const apkPath = candidates.find((path) => existsSync(path));
+    if (!apkPath) {
+      const { downloadUrl } = getMobileAppVersionInfo();
+      if (downloadUrl.includes("/api/mobile/app-download")) {
+        return reply.status(404).send({ error: "APK not found on server" });
+      }
+      return reply.redirect(downloadUrl);
+    }
+
+    reply.header("Content-Type", "application/vnd.android.package-archive");
+    reply.header("Content-Disposition", 'attachment; filename="SWARKA-Admin.apk"');
+    return reply.send(createReadStream(apkPath));
+  });
 
   app.get("/api/settings", async () => {
     const settings = await prisma.siteSettings.findUnique({

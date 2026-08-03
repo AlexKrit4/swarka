@@ -56,7 +56,7 @@ function ReviewsContent() {
             <p className="text-sm text-gray-600 mt-1">{item.text}</p>
             <div className="flex gap-2 mt-3">
               <button type="button" className="text-sm underline" onClick={() => setEditing(item)}>Изменить</button>
-              <button type="button" className="btn-danger" onClick={async () => { if (confirm("Удалить?")) { await deleteReview(item.id); load(); } }}>Удалить</button>
+              <button type="button" className="btn-danger" onClick={async () => { await deleteReview(item.id); load(); }}>Удалить</button>
             </div>
           </div>
         ))}

@@ -1,8 +1,15 @@
 import type { FastifyInstance } from "fastify";
 import bcrypt from "bcryptjs";
 import { prisma, LeadStatus } from "@swarka/database";
-import { requireAuth, requireSuperAdmin } from "../plugins/auth.js";
+import { requireAuth, requireEditor, requireSuperAdmin } from "../plugins/auth.js";
 import { deleteUpload, saveUpload } from "../lib/uploads.js";
+import {
+  createSiteSnapshot,
+  getAuditUser,
+  logChange,
+  restoreChangeLog,
+  restoreSiteSnapshot,
+} from "../lib/audit.js";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -14,12 +21,14 @@ const userCreateSchema = z.object({
   email: z.string().min(1).max(120),
   password: z.string().min(6),
   name: z.string().optional(),
+  role: z.enum(["ADMIN", "VIEWER"]).default("ADMIN"),
 });
 
 const userUpdateSchema = z.object({
   email: z.string().min(1).max(120).optional(),
   password: z.string().min(6).optional(),
   name: z.string().nullable().optional(),
+  role: z.enum(["ADMIN", "VIEWER"]).optional(),
 });
 
 export async function adminRoutes(app: FastifyInstance) {
@@ -97,7 +106,7 @@ export async function adminRoutes(app: FastifyInstance) {
         email: parsed.data.email,
         password,
         name: parsed.data.name || "Администратор",
-        role: "ADMIN",
+        role: parsed.data.role,
       },
       select: { id: true, email: true, name: true, role: true, createdAt: true },
     });
@@ -119,10 +128,11 @@ export async function adminRoutes(app: FastifyInstance) {
       return reply.status(403).send({ error: "Cannot edit main admin" });
     }
 
-    const data: { email?: string; name?: string | null; password?: string } = {};
+    const data: { email?: string; name?: string | null; password?: string; role?: string } = {};
     if (parsed.data.email) data.email = parsed.data.email;
     if (parsed.data.name !== undefined) data.name = parsed.data.name;
     if (parsed.data.password) data.password = await bcrypt.hash(parsed.data.password, 10);
+    if (parsed.data.role) data.role = parsed.data.role;
 
     return prisma.user.update({
       where: { id },
@@ -168,12 +178,25 @@ export async function adminRoutes(app: FastifyInstance) {
     return prisma.siteSettings.findUnique({ where: { id: "singleton" } });
   });
 
-  app.put("/api/admin/settings", { preHandler: requireAuth }, async (request) => {
+  app.put("/api/admin/settings", { preHandler: requireEditor }, async (request) => {
+    const user = getAuditUser(request);
+    const before = await prisma.siteSettings.findUnique({ where: { id: "singleton" } });
+    await createSiteSnapshot(user, "Автоснимок перед изменением настроек");
     const data = request.body as Record<string, unknown>;
-    return prisma.siteSettings.update({
+    const after = await prisma.siteSettings.update({
       where: { id: "singleton" },
       data,
     });
+    await logChange({
+      user,
+      entityType: "settings",
+      entityId: "singleton",
+      action: "update",
+      label: "Настройки сайта",
+      before,
+      after,
+    });
+    return after;
   });
 
   // Services CRUD
@@ -181,22 +204,55 @@ export async function adminRoutes(app: FastifyInstance) {
     return prisma.service.findMany({ orderBy: { sortOrder: "asc" } });
   });
 
-  app.post("/api/admin/services", { preHandler: requireAuth }, async (request) => {
+  app.post("/api/admin/services", { preHandler: requireEditor }, async (request) => {
+    const user = getAuditUser(request);
     const data = request.body as Parameters<typeof prisma.service.create>[0]["data"];
-    return prisma.service.create({ data });
+    const created = await prisma.service.create({ data });
+    await logChange({
+      user,
+      entityType: "service",
+      entityId: created.id,
+      action: "create",
+      label: `Создана услуга: ${created.title}`,
+      after: created,
+    });
+    return created;
   });
 
-  app.put("/api/admin/services/:id", { preHandler: requireAuth }, async (request) => {
+  app.put("/api/admin/services/:id", { preHandler: requireEditor }, async (request) => {
+    const user = getAuditUser(request);
     const { id } = request.params as { id: string };
+    const before = await prisma.service.findUnique({ where: { id } });
     const data = request.body as Parameters<typeof prisma.service.update>[0]["data"];
-    return prisma.service.update({ where: { id }, data });
+    const updated = await prisma.service.update({ where: { id }, data });
+    await logChange({
+      user,
+      entityType: "service",
+      entityId: id,
+      action: "update",
+      label: `Изменена услуга: ${updated.title}`,
+      before,
+      after: updated,
+    });
+    return updated;
   });
 
-  app.delete("/api/admin/services/:id", { preHandler: requireAuth }, async (request) => {
+  app.delete("/api/admin/services/:id", { preHandler: requireEditor }, async (request) => {
+    const user = getAuditUser(request);
     const { id } = request.params as { id: string };
     const item = await prisma.service.findUnique({ where: { id } });
     if (item?.imageUrl?.startsWith("/uploads/")) deleteUpload(item.imageUrl);
     await prisma.service.delete({ where: { id } });
+    if (item) {
+      await logChange({
+        user,
+        entityType: "service",
+        entityId: id,
+        action: "delete",
+        label: `Удалена услуга: ${item.title}`,
+        before: item,
+      });
+    }
     return { success: true };
   });
 
@@ -205,22 +261,55 @@ export async function adminRoutes(app: FastifyInstance) {
     return prisma.portfolioItem.findMany({ orderBy: { sortOrder: "asc" } });
   });
 
-  app.post("/api/admin/portfolio", { preHandler: requireAuth }, async (request) => {
+  app.post("/api/admin/portfolio", { preHandler: requireEditor }, async (request) => {
+    const user = getAuditUser(request);
     const data = request.body as Parameters<typeof prisma.portfolioItem.create>[0]["data"];
-    return prisma.portfolioItem.create({ data });
+    const created = await prisma.portfolioItem.create({ data });
+    await logChange({
+      user,
+      entityType: "portfolio",
+      entityId: created.id,
+      action: "create",
+      label: `Добавлена работа: ${created.title}`,
+      after: created,
+    });
+    return created;
   });
 
-  app.put("/api/admin/portfolio/:id", { preHandler: requireAuth }, async (request) => {
+  app.put("/api/admin/portfolio/:id", { preHandler: requireEditor }, async (request) => {
+    const user = getAuditUser(request);
     const { id } = request.params as { id: string };
+    const before = await prisma.portfolioItem.findUnique({ where: { id } });
     const data = request.body as Parameters<typeof prisma.portfolioItem.update>[0]["data"];
-    return prisma.portfolioItem.update({ where: { id }, data });
+    const updated = await prisma.portfolioItem.update({ where: { id }, data });
+    await logChange({
+      user,
+      entityType: "portfolio",
+      entityId: id,
+      action: "update",
+      label: `Изменена работа: ${updated.title}`,
+      before,
+      after: updated,
+    });
+    return updated;
   });
 
-  app.delete("/api/admin/portfolio/:id", { preHandler: requireAuth }, async (request) => {
+  app.delete("/api/admin/portfolio/:id", { preHandler: requireEditor }, async (request) => {
+    const user = getAuditUser(request);
     const { id } = request.params as { id: string };
     const item = await prisma.portfolioItem.findUnique({ where: { id } });
     if (item?.imageUrl?.startsWith("/uploads/")) deleteUpload(item.imageUrl);
     await prisma.portfolioItem.delete({ where: { id } });
+    if (item) {
+      await logChange({
+        user,
+        entityType: "portfolio",
+        entityId: id,
+        action: "delete",
+        label: `Удалена работа: ${item.title}`,
+        before: item,
+      });
+    }
     return { success: true };
   });
 
@@ -229,20 +318,54 @@ export async function adminRoutes(app: FastifyInstance) {
     return prisma.faqItem.findMany({ orderBy: { sortOrder: "asc" } });
   });
 
-  app.post("/api/admin/faq", { preHandler: requireAuth }, async (request) => {
+  app.post("/api/admin/faq", { preHandler: requireEditor }, async (request) => {
+    const user = getAuditUser(request);
     const data = request.body as Parameters<typeof prisma.faqItem.create>[0]["data"];
-    return prisma.faqItem.create({ data });
+    const created = await prisma.faqItem.create({ data });
+    await logChange({
+      user,
+      entityType: "faq",
+      entityId: created.id,
+      action: "create",
+      label: `Добавлен FAQ: ${created.question}`,
+      after: created,
+    });
+    return created;
   });
 
-  app.put("/api/admin/faq/:id", { preHandler: requireAuth }, async (request) => {
+  app.put("/api/admin/faq/:id", { preHandler: requireEditor }, async (request) => {
+    const user = getAuditUser(request);
     const { id } = request.params as { id: string };
+    const before = await prisma.faqItem.findUnique({ where: { id } });
     const data = request.body as Parameters<typeof prisma.faqItem.update>[0]["data"];
-    return prisma.faqItem.update({ where: { id }, data });
+    const updated = await prisma.faqItem.update({ where: { id }, data });
+    await logChange({
+      user,
+      entityType: "faq",
+      entityId: id,
+      action: "update",
+      label: `Изменён FAQ: ${updated.question}`,
+      before,
+      after: updated,
+    });
+    return updated;
   });
 
-  app.delete("/api/admin/faq/:id", { preHandler: requireAuth }, async (request) => {
+  app.delete("/api/admin/faq/:id", { preHandler: requireEditor }, async (request) => {
+    const user = getAuditUser(request);
     const { id } = request.params as { id: string };
+    const item = await prisma.faqItem.findUnique({ where: { id } });
     await prisma.faqItem.delete({ where: { id } });
+    if (item) {
+      await logChange({
+        user,
+        entityType: "faq",
+        entityId: id,
+        action: "delete",
+        label: `Удалён FAQ: ${item.question}`,
+        before: item,
+      });
+    }
     return { success: true };
   });
 
@@ -251,20 +374,54 @@ export async function adminRoutes(app: FastifyInstance) {
     return prisma.review.findMany({ orderBy: { sortOrder: "asc" } });
   });
 
-  app.post("/api/admin/reviews", { preHandler: requireAuth }, async (request) => {
+  app.post("/api/admin/reviews", { preHandler: requireEditor }, async (request) => {
+    const user = getAuditUser(request);
     const data = request.body as Parameters<typeof prisma.review.create>[0]["data"];
-    return prisma.review.create({ data });
+    const created = await prisma.review.create({ data });
+    await logChange({
+      user,
+      entityType: "review",
+      entityId: created.id,
+      action: "create",
+      label: `Добавлен отзыв: ${created.authorName}`,
+      after: created,
+    });
+    return created;
   });
 
-  app.put("/api/admin/reviews/:id", { preHandler: requireAuth }, async (request) => {
+  app.put("/api/admin/reviews/:id", { preHandler: requireEditor }, async (request) => {
+    const user = getAuditUser(request);
     const { id } = request.params as { id: string };
+    const before = await prisma.review.findUnique({ where: { id } });
     const data = request.body as Parameters<typeof prisma.review.update>[0]["data"];
-    return prisma.review.update({ where: { id }, data });
+    const updated = await prisma.review.update({ where: { id }, data });
+    await logChange({
+      user,
+      entityType: "review",
+      entityId: id,
+      action: "update",
+      label: `Изменён отзыв: ${updated.authorName}`,
+      before,
+      after: updated,
+    });
+    return updated;
   });
 
-  app.delete("/api/admin/reviews/:id", { preHandler: requireAuth }, async (request) => {
+  app.delete("/api/admin/reviews/:id", { preHandler: requireEditor }, async (request) => {
+    const user = getAuditUser(request);
     const { id } = request.params as { id: string };
+    const item = await prisma.review.findUnique({ where: { id } });
     await prisma.review.delete({ where: { id } });
+    if (item) {
+      await logChange({
+        user,
+        entityType: "review",
+        entityId: id,
+        action: "delete",
+        label: `Удалён отзыв: ${item.authorName}`,
+        before: item,
+      });
+    }
     return { success: true };
   });
 
@@ -273,20 +430,94 @@ export async function adminRoutes(app: FastifyInstance) {
     return prisma.lead.findMany({ orderBy: { createdAt: "desc" } });
   });
 
-  app.put("/api/admin/leads/:id", { preHandler: requireAuth }, async (request) => {
+  app.put("/api/admin/leads/:id", { preHandler: requireEditor }, async (request) => {
     const { id } = request.params as { id: string };
     const data = request.body as { status?: LeadStatus; note?: string };
     return prisma.lead.update({ where: { id }, data });
   });
 
-  app.delete("/api/admin/leads/:id", { preHandler: requireAuth }, async (request) => {
+  app.delete("/api/admin/leads/:id", { preHandler: requireEditor }, async (request) => {
     const { id } = request.params as { id: string };
     await prisma.lead.delete({ where: { id } });
     return { success: true };
   });
 
+  // Versions & audit log
+  app.get("/api/admin/changelog", { preHandler: requireAuth }, async () => {
+    return prisma.changeLog.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 200,
+    });
+  });
+
+  app.get("/api/admin/snapshots", { preHandler: requireAuth }, async () => {
+    return prisma.siteSnapshot.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      select: {
+        id: true,
+        label: true,
+        userEmail: true,
+        createdAt: true,
+      },
+    });
+  });
+
+  app.post("/api/admin/snapshots", { preHandler: requireEditor }, async (request) => {
+    const user = getAuditUser(request);
+    const body = (request.body ?? {}) as { label?: string };
+    const snapshot = await createSiteSnapshot(user, body.label);
+    await logChange({
+      user,
+      entityType: "snapshot",
+      entityId: snapshot.id,
+      action: "create",
+      label: snapshot.label ?? "Ручной снимок сайта",
+      after: { snapshotId: snapshot.id },
+    });
+    return snapshot;
+  });
+
+  app.post("/api/admin/changelog/:id/restore", { preHandler: requireEditor }, async (request, reply) => {
+    const user = getAuditUser(request);
+    const { id } = request.params as { id: string };
+    try {
+      await createSiteSnapshot(user, "Перед откатом изменения");
+      await restoreChangeLog(id);
+      await logChange({
+        user,
+        entityType: "changelog",
+        entityId: id,
+        action: "restore",
+        label: "Откат отдельного изменения",
+      });
+      return { success: true };
+    } catch (err) {
+      return reply.status(400).send({ error: (err as Error).message });
+    }
+  });
+
+  app.post("/api/admin/snapshots/:id/restore", { preHandler: requireEditor }, async (request, reply) => {
+    const user = getAuditUser(request);
+    const { id } = request.params as { id: string };
+    try {
+      await createSiteSnapshot(user, "Перед восстановлением снимка");
+      await restoreSiteSnapshot(id);
+      await logChange({
+        user,
+        entityType: "snapshot",
+        entityId: id,
+        action: "restore",
+        label: "Восстановление полного снимка сайта",
+      });
+      return { success: true };
+    } catch (err) {
+      return reply.status(400).send({ error: (err as Error).message });
+    }
+  });
+
   // Upload
-  app.post("/api/admin/upload", { preHandler: requireAuth }, async (request, reply) => {
+  app.post("/api/admin/upload", { preHandler: requireEditor }, async (request, reply) => {
     const file = await request.file();
     if (!file) {
       return reply.status(400).send({ error: "No file uploaded" });
