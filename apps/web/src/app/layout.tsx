@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Manrope, Unbounded } from "next/font/google";
 import { getSiteData } from "@/lib/api";
 import { SmoothScroll } from "@/components/SmoothScroll";
+import { SiteTracker } from "@/components/SiteTracker";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -52,6 +53,7 @@ export default async function RootLayout({
     <html lang="ru">
       <body className={`${manrope.variable} ${unbounded.variable} antialiased`}>
         <SmoothScroll>{children}</SmoothScroll>
+        <SiteTracker />
         {metrikaId && (
           <script
             dangerouslySetInnerHTML={{
