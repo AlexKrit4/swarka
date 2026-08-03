@@ -15,7 +15,12 @@ const NAV = [
   { href: "/leads", label: "Заявки" },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  mobile?: boolean;
+  onClose?: () => void;
+}
+
+export function Sidebar({ mobile = false, onClose }: SidebarProps) {
   const pathname = usePathname();
   const user = useAdminUser();
   const isSuper = user?.role === "SUPER_ADMIN";
@@ -31,23 +36,58 @@ export function Sidebar() {
     ? [...NAV, { href: "/admins", label: "Админы" }]
     : NAV;
 
+  const handleNavClick = () => {
+    if (mobile) onClose?.();
+  };
+
   return (
-    <aside className="w-56 bg-gray-900 text-white min-h-screen p-4 flex flex-col shrink-0">
-      <div className="mb-8">
-        <p className="text-lg font-black italic">SWARKA</p>
-        <p className="text-xs text-gray-400">
-          {isSuper ? "Главный админ" : "Админ-панель"}
-        </p>
-        {user?.email && (
-          <p className="text-[11px] text-gray-500 mt-1 truncate">{user.email}</p>
-        )}
-      </div>
+    <aside
+      className={
+        mobile
+          ? "fixed inset-0 z-50 bg-gray-900 text-white flex flex-col p-4"
+          : "w-56 bg-gray-900 text-white min-h-screen p-4 flex flex-col shrink-0"
+      }
+    >
+      {mobile && (
+        <div className="flex items-center gap-3 mb-6">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-10 h-10 flex items-center justify-center rounded-lg border border-white/15 text-xl"
+            aria-label="Закрыть меню"
+          >
+            ←
+          </button>
+          <div>
+            <p className="text-lg font-black italic">SWARKA</p>
+            <p className="text-xs text-gray-400">Меню</p>
+          </div>
+        </div>
+      )}
+
+      {!mobile && (
+        <div className="mb-8">
+          <p className="text-lg font-black italic">SWARKA</p>
+          <p className="text-xs text-gray-400">
+            {isSuper ? "Главный админ" : "Админ-панель"}
+          </p>
+          {user?.email && (
+            <p className="text-[11px] text-gray-500 mt-1 truncate">{user.email}</p>
+          )}
+        </div>
+      )}
+
+      {mobile && user?.email && (
+        <p className="text-[11px] text-gray-500 mb-4 truncate">{user.email}</p>
+      )}
+
       <nav className="flex flex-col gap-1 flex-1">
         {items.map((item) => (
           <Link
             key={item.href}
             href={item.href}
-            className={`px-3 py-2 rounded-lg text-sm transition-colors ${
+            onClick={handleNavClick}
+            className={`px-3 py-3 rounded-lg text-base transition-colors ${
               pathname === item.href
                 ? "bg-[#F7E018] text-black font-semibold"
                 : "text-gray-300 hover:bg-white/10"
@@ -57,10 +97,11 @@ export function Sidebar() {
           </Link>
         ))}
       </nav>
+
       <button
         type="button"
         onClick={handleLogout}
-        className="mt-4 text-sm text-gray-400 hover:text-white text-left px-3 py-2"
+        className="mt-4 text-sm text-gray-400 hover:text-white text-left px-3 py-3"
       >
         Выйти
       </button>
