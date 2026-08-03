@@ -2,6 +2,7 @@ FROM node:20-alpine AS base
 WORKDIR /app
 
 FROM base AS builder
+COPY packages/shared ./packages/shared
 COPY packages/database ./packages/database
 COPY packages/api ./packages/api
 
@@ -15,6 +16,7 @@ FROM base AS runner
 ENV NODE_ENV=production
 WORKDIR /app
 
+COPY --from=builder /app/packages/shared ./packages/shared
 COPY --from=builder /app/packages/database ./packages/database
 COPY --from=builder /app/packages/api ./packages/api
 
@@ -24,5 +26,4 @@ RUN mkdir -p /app/uploads
 ENV UPLOADS_DIR=/app/uploads
 EXPOSE 4000
 
-# tsx runs compiled JS + resolves @swarka/database TS entry; prisma CLI from database deps
 CMD ["sh", "-c", "cd /app/packages/database && npx prisma migrate deploy && npx tsx prisma/seed.ts && cd /app/packages/api && npx tsx src/index.ts"]

@@ -1,0 +1,29 @@
+<resources>
+    <string name="app_name">SWARKA Admin</string>
+    <string name="setup_pin_title">Создайте PIN-код</string>
+    <string name="setup_pin_subtitle">PIN защитит доступ к админке, как в банковском приложении</string>
+    <string name="confirm_pin_title">Повторите PIN</string>
+    <string name="unlock_pin_title">Введите PIN</string>
+    <string name="unlock_pin_subtitle">Для входа в SWARKA Admin</string>
+    <string name="pin_mismatch">PIN не совпадает. Попробуйте снова</string>
+    <string name="pin_invalid">Неверный PIN</string>
+    <string name="pin_too_short">PIN должен содержать минимум 4 цифры</string>
+    <string name="use_fingerprint">Войти по отпечатку</string>
+    <string name="enable_biometric">Включить вход по отпечатку</string>
+    <string name="skip_biometric">Пропустить</string>
+    <string name="loading_admin">Загрузка админки…</string>
+    <string name="login_failed">Не удалось войти. Проверьте интернет</string>
+    <string name="delete_digit">Удалить</string>
+    <string name="biometric_title">SWARKA Admin</string>
+    <string name="biometric_subtitle">Подтвердите отпечаток пальца</string>
+    <string name="account_picker_title">Войти как</string>
+    <string name="account_picker_subtitle">Выберите аккаунт подадмина</string>
+    <string name="account_picker_empty">Подадмины не найдены</string>
+    <string name="account_picker_error">Не удалось загрузить список аккаунтов</string>
+    <string name="password_hint">Пароль</string>
+    <string name="email_hint">Email или телефон</string>
+    <string name="enter_password_for_account">Введите пароль для выбранного аккаунта</string>
+    <string name="login_button">Войти</string>
+    <string name="retry_accounts">Повторить загрузку аккаунтов</string>
+    <string name="manual_login_hint">Список аккаунтов временно недоступен. Войдите вручную:</string>
+</resources>

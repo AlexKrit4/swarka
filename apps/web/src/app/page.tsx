@@ -1,6 +1,7 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { getSiteData, getServices, getPortfolio, getFaq } from "@/lib/api";
+import { getSiteContent, getWhyUsItems } from "@/lib/content";
 import { Hero } from "@/components/Hero";
 import { Services } from "@/components/Services";
 import { Portfolio } from "@/components/Portfolio";
@@ -26,26 +27,40 @@ export default async function HomePage() {
       getFaq(),
     ]);
 
-    const { settings, reviews, whyUs } = siteData;
+    const { settings, reviews } = siteData;
+    const content = getSiteContent(settings);
+    const whyUs = getWhyUsItems(settings);
 
     return (
       <>
-        <JsonLd settings={settings} />
+        <JsonLd settings={settings} content={content} />
         <YandexMetrika id={settings.yandexMetrikaId} />
-        <Header settings={settings} />
+        <Header settings={settings} content={content} />
         <main className="pb-20 sm:pb-0">
-          <Hero settings={settings} />
-          <Services services={services} />
-          <Portfolio items={portfolio} />
-          <Promo settings={settings} />
-          <WhyUs items={whyUs} />
-          <Reviews reviews={reviews} />
-          <FAQ items={faq} />
-          <ContactSection settings={settings} services={services} />
+          <Hero settings={settings} content={content} />
+          {content.visibility.services && (
+            <Services services={services} content={content.services} />
+          )}
+          {content.visibility.portfolio && (
+            <Portfolio items={portfolio} content={content.portfolio} />
+          )}
+          {content.visibility.promo && settings.promoEnabled && (
+            <Promo settings={settings} content={content.promo} />
+          )}
+          {content.visibility.whyUs && <WhyUs items={whyUs} content={content.whyUs} />}
+          {content.visibility.reviews && (
+            <Reviews reviews={reviews} content={content.reviews} />
+          )}
+          {content.visibility.faq && <FAQ items={faq} content={content.faq} />}
+          <ContactSection settings={settings} services={services} content={content} />
         </main>
-        <Footer settings={settings} />
-        <MobileCTA settings={settings} />
-        <CalculatorModal services={services} />
+        <Footer settings={settings} content={content.footer} />
+        {content.visibility.mobileCta && (
+          <MobileCTA settings={settings} content={content.mobileCta} />
+        )}
+        {content.visibility.calculator && (
+          <CalculatorModal services={services} content={content.calculator} />
+        )}
       </>
     );
   } catch {

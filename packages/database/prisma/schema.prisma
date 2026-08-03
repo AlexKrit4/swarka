@@ -36,6 +36,8 @@ model SiteSettings {
   seoDescription  String?
   yandexMetrikaId String?
   whyUsJson       String?
+  contentJson     String?
+  privacyContent  String?  @db.Text
   address         String?
   workZone        String   @default("Москва и Московская область")
   updatedAt       DateTime @updatedAt
@@ -99,4 +101,26 @@ enum LeadStatus {
   NEW
   IN_PROGRESS
   CLOSED
+}
+
+model ChangeLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  userEmail  String?
+  entityType String
+  entityId   String?
+  action     String
+  label      String
+  beforeJson String?  @db.Text
+  afterJson  String?  @db.Text
+  createdAt  DateTime @default(now())
+}
+
+model SiteSnapshot {
+  id           String   @id @default(cuid())
+  label        String?
+  userId       String?
+  userEmail    String?
+  snapshotJson String   @db.Text
+  createdAt    DateTime @default(now())
 }

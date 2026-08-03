@@ -62,10 +62,8 @@ function LeadsContent() {
                     type="button"
                     className="btn-danger"
                     onClick={async () => {
-                      if (confirm("Удалить заявку?")) {
-                        await deleteLead(lead.id);
-                        load();
-                      }
+                      await deleteLead(lead.id);
+                      load();
                     }}
                   >
                     Удалить
