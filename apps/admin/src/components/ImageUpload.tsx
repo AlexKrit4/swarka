@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { uploadFile } from "@/lib/api";
+import { notifyError, setMobileLoading } from "@/lib/mobile-bridge";
 
 interface ImageUploadProps {
   value: string | null;
@@ -16,13 +17,15 @@ export function ImageUpload({ value, onChange, label = "Изображение" 
     const file = e.target.files?.[0];
     if (!file) return;
     setLoading(true);
+    setMobileLoading(true);
     try {
       const { url } = await uploadFile(file);
       onChange(url);
     } catch {
-      alert("Ошибка загрузки");
+      notifyError("Ошибка загрузки изображения");
     } finally {
       setLoading(false);
+      setMobileLoading(false);
     }
   };
 
