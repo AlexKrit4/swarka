@@ -20,11 +20,12 @@ export function getUploadsDir() {
 
 export async function saveUpload(
   fileStream: NodeJS.ReadableStream,
-  filename: string
+  filename: string,
+  options?: { allowedExts?: string[] }
 ): Promise<string> {
   ensureUploadsDir();
   const ext = path.extname(filename).toLowerCase() || ".jpg";
-  const allowed = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
+  const allowed = options?.allowedExts ?? [".jpg", ".jpeg", ".png", ".webp", ".gif"];
   if (!allowed.includes(ext)) {
     throw new Error("Invalid file type");
   }
@@ -33,6 +34,20 @@ export async function saveUpload(
   await pipeline(fileStream, createWriteStream(filepath));
   return `/uploads/${newName}`;
 }
+
+export const SUPPORT_UPLOAD_EXTS = [
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".webp",
+  ".gif",
+  ".pdf",
+  ".doc",
+  ".docx",
+  ".xls",
+  ".xlsx",
+  ".txt",
+];
 
 export function deleteUpload(urlPath: string) {
   if (!urlPath.startsWith("/uploads/")) return;
