@@ -1,6 +1,6 @@
 "use client";
 
-import type { WhyUsItem } from "@/lib/types";
+import type { SiteContent, WhyUsItem } from "@/lib/types";
 import { SectionHeading } from "./SectionHeading";
 import { Stagger } from "./Stagger";
 
@@ -13,15 +13,21 @@ const ICONS: Record<string, string> = {
 
 interface WhyUsProps {
   items: WhyUsItem[];
+  content: SiteContent["whyUs"];
 }
 
-export function WhyUs({ items }: WhyUsProps) {
+export function WhyUs({ items, content }: WhyUsProps) {
   if (!items.length) return null;
 
   return (
     <section className="py-20 lg:py-28 bg-paper">
       <div className="max-w-7xl mx-auto px-4 lg:px-8">
-        <SectionHeading eyebrow="Преимущества" title="Почему мы" align="center" />
+        <SectionHeading
+          eyebrow={content.eyebrow}
+          title={content.title}
+          subtitle={content.subtitle}
+          align="center"
+        />
         <Stagger className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {items.map((item, i) => (
             <div

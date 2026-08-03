@@ -7,7 +7,9 @@ import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import { publicRoutes } from "./routes/public.js";
 import { adminRoutes } from "./routes/admin.js";
+import { billingRoutes } from "./routes/billing.js";
 import { ensureUploadsDir, getUploadsDir } from "./lib/uploads.js";
+import { startBillingCron } from "./lib/billing-cron.js";
 
 const PORT = Number(process.env.API_PORT ?? 4000);
 const CORS_ORIGINS = (process.env.CORS_ORIGINS ?? "http://localhost:3000,http://localhost:3001")
@@ -55,6 +57,9 @@ async function main() {
 
   await app.register(publicRoutes);
   await app.register(adminRoutes);
+  await app.register(billingRoutes);
+
+  startBillingCron();
 
   await app.listen({ port: PORT, host: "0.0.0.0" });
   console.log(`API running on http://localhost:${PORT}`);
