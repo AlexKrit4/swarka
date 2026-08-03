@@ -1,0 +1,16 @@
+<resources>
+    <style name="Theme.SwarkaAdmin" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#1A1714</item>
+        <item name="colorPrimaryVariant">#1A1714</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorSecondary">#F7E018</item>
+        <item name="colorOnSecondary">#1A1714</item>
+        <item name="android:statusBarColor">#1A1714</item>
+        <item name="android:navigationBarColor">#1A1714</item>
+        <item name="android:windowBackground">#1A1714</item>
+    </style>
+
+    <style name="Theme.SwarkaAdmin.Splash" parent="Theme.SwarkaAdmin">
+        <item name="android:windowFullscreen">true</item>
+    </style>
+</resources>

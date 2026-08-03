@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { getFaq, createFaq, updateFaq, deleteFaq, type FaqItem } from "@/lib/api";
+import { notifySaved } from "@/lib/mobile-bridge";
 
 function FaqContent() {
   const [items, setItems] = useState<FaqItem[]>([]);
@@ -25,6 +26,7 @@ function FaqContent() {
     }
     setEditing(null);
     load();
+    notifySaved();
   };
 
   return (
@@ -54,7 +56,7 @@ function FaqContent() {
             <p className="text-sm text-gray-600 mt-1">{item.answer}</p>
             <div className="flex gap-2 mt-3">
               <button type="button" className="text-sm underline" onClick={() => setEditing(item)}>Изменить</button>
-              <button type="button" className="btn-danger" onClick={async () => { if (confirm("Удалить?")) { await deleteFaq(item.id); load(); } }}>Удалить</button>
+              <button type="button" className="btn-danger" onClick={async () => { await deleteFaq(item.id); load(); }}>Удалить</button>
             </div>
           </div>
         ))}
