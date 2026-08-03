@@ -11,6 +11,17 @@ const leadSchema = z.object({
   source: z.string().optional(),
 });
 
+const blockRushScoreSchema = z.object({
+  playerId: z.string().min(12).max(64).regex(/^[a-zA-Z0-9-]+$/),
+  playerName: z
+    .string()
+    .trim()
+    .min(2)
+    .max(20)
+    .regex(/^[\p{L}\p{N} _.-]+$/u),
+  score: z.number().int().min(0).max(100_000_000),
+});
+
 export async function publicRoutes(app: FastifyInstance) {
   app.get("/api/health", async () => ({ status: "ok" }));
 
@@ -45,6 +56,49 @@ export async function publicRoutes(app: FastifyInstance) {
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
     });
+  });
+
+  app.get("/api/blockrush/leaderboard", async () => {
+    const scores = await prisma.blockRushScore.findMany({
+      orderBy: [{ score: "desc" }, { updatedAt: "asc" }],
+      take: 50,
+      select: {
+        playerId: true,
+        playerName: true,
+        score: true,
+        updatedAt: true,
+      },
+    });
+    return { scores };
+  });
+
+  app.post("/api/blockrush/leaderboard", async (request, reply) => {
+    const parsed = blockRushScoreSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: "Invalid score" });
+    }
+
+    const { playerId, playerName, score } = parsed.data;
+    const current = await prisma.blockRushScore.findUnique({
+      where: { playerId },
+    });
+    const saved =
+      current == null
+        ? await prisma.blockRushScore.create({
+            data: { playerId, playerName, score },
+          })
+        : await prisma.blockRushScore.update({
+            where: { playerId },
+            data: {
+              playerName,
+              score: Math.max(score, current.score),
+            },
+          });
+    const rank =
+      (await prisma.blockRushScore.count({
+        where: { score: { gt: saved.score } },
+      })) + 1;
+    return { success: true, score: saved.score, rank };
   });
 
   app.post("/api/leads", async (request, reply) => {
