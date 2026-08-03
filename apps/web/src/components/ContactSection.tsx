@@ -1,6 +1,6 @@
 "use client";
 
-import type { SiteSettings } from "@/lib/types";
+import type { SiteContent, SiteSettings } from "@/lib/types";
 import type { Service } from "@/lib/types";
 import { ContactForm } from "./ContactForm";
 import { Reveal } from "./Reveal";
@@ -8,10 +8,12 @@ import { Reveal } from "./Reveal";
 interface ContactSectionProps {
   settings: SiteSettings;
   services: Service[];
+  content: SiteContent;
 }
 
-export function ContactSection({ settings, services }: ContactSectionProps) {
+export function ContactSection({ settings, services, content }: ContactSectionProps) {
   const phone = settings.phone.replace(/\s/g, "");
+  const contact = content.contact;
 
   return (
     <section id="contact" className="relative py-20 lg:py-28 bg-primary text-white overflow-hidden">
@@ -20,12 +22,12 @@ export function ContactSection({ settings, services }: ContactSectionProps) {
       <div className="relative max-w-7xl mx-auto px-4 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16">
           <Reveal>
-            <p className="section-eyebrow text-weld mb-4">Связь</p>
+            <p className="section-eyebrow text-weld mb-4">{contact.eyebrow}</p>
             <h2 className="font-display text-3xl lg:text-5xl font-semibold mb-4 leading-tight">
-              Оставить заявку
+              {contact.title}
             </h2>
             <p className="text-white/60 mb-8 text-lg leading-relaxed max-w-md">
-              Оставьте контакты — перезвоним и рассчитаем стоимость бесплатно
+              {contact.description}
             </p>
             <div className="space-y-4">
               <a
@@ -44,11 +46,14 @@ export function ContactSection({ settings, services }: ContactSectionProps) {
                 </a>
               )}
               <p className="text-white/45 pt-2 border-t border-white/10">{settings.workZone}</p>
+              {settings.address && (
+                <p className="text-white/45">{settings.address}</p>
+              )}
             </div>
           </Reveal>
           <Reveal delay={0.12}>
             <div className="bg-white text-ink p-6 lg:p-8 border border-white/10 shadow-[0_40px_80px_-40px_rgba(0,0,0,0.6)]">
-              <ContactForm services={services} />
+              <ContactForm services={services} content={content.form} />
             </div>
           </Reveal>
         </div>

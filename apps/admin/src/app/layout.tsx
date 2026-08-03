@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { MobileAppFontScale } from "@/components/MobileAppFontScale";
 import "./globals.css";
 
 const inter = Inter({
@@ -12,6 +13,12 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -19,7 +26,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
-      <body className={`${inter.variable} antialiased`}>{children}</body>
+      <body className={`${inter.variable} antialiased`}>
+        <MobileAppFontScale />
+        {children}
+      </body>
     </html>
   );
 }

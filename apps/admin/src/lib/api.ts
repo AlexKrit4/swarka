@@ -31,7 +31,13 @@ async function apiFetch<T>(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error((err as { error?: string }).error ?? "Request failed");
+    const message = (err as { error?: string }).error ?? "Request failed";
+    if (typeof window !== "undefined") {
+      import("./mobile-bridge").then(({ isMobileApp, notifyError }) => {
+        if (isMobileApp()) notifyError(message);
+      });
+    }
+    throw new Error(message);
   }
 
   return res.json();
@@ -77,6 +83,7 @@ export async function createAdmin(data: {
   email: string;
   password: string;
   name?: string;
+  role?: "ADMIN" | "VIEWER";
 }) {
   return apiFetch<AdminAccount>("/api/admin/users", {
     method: "POST",
@@ -86,7 +93,7 @@ export async function createAdmin(data: {
 
 export async function updateAdmin(
   id: string,
-  data: { email?: string; password?: string; name?: string | null }
+  data: { email?: string; password?: string; name?: string | null; role?: "ADMIN" | "VIEWER" }
 ) {
   return apiFetch<AdminAccount>(`/api/admin/users/${id}`, {
     method: "PUT",
@@ -105,7 +112,41 @@ export async function getDashboard() {
     recentLeads: Lead[];
     totalServices: number;
     totalPortfolio: number;
+    analytics: {
+      visitsToday: number;
+      visitsWeek: number;
+      uniqueVisitorsToday: number;
+      uniqueVisitorsWeek: number;
+      newVisitorsToday: number;
+      newVisitorsWeek: number;
+    };
+    billing: BillingStatus;
   }>("/api/admin/dashboard");
+}
+
+export interface AnalyticsSummary {
+  periodDays: number;
+  from: string;
+  to: string;
+  visits: number;
+  uniqueVisitors: number;
+  newVisitors: number;
+  leads: number;
+  conversionRate: number;
+  today: {
+    visits: number;
+    uniqueVisitors: number;
+    newVisitors: number;
+    leads: number;
+  };
+  visitsByDay: { date: string; visits: number; uniqueVisitors: number }[];
+  topPages: { path: string; visits: number }[];
+  topReferrers: { referer: string; visits: number }[];
+  devices: { device: string; visits: number }[];
+}
+
+export async function getAnalytics(days = 7) {
+  return apiFetch<AnalyticsSummary>(`/api/admin/analytics?days=${days}`);
 }
 
 export interface Lead {
@@ -177,6 +218,8 @@ export interface SiteSettings {
   seoDescription: string | null;
   yandexMetrikaId: string | null;
   whyUsJson: string | null;
+  contentJson: string | null;
+  privacyContent: string | null;
   address: string | null;
   workZone: string;
 }
@@ -301,6 +344,49 @@ export async function deleteLead(id: string) {
   return apiFetch(`/api/admin/leads/${id}`, { method: "DELETE" });
 }
 
+export interface ChangeLogItem {
+  id: string;
+  userId: string | null;
+  userEmail: string | null;
+  entityType: string;
+  entityId: string | null;
+  action: string;
+  label: string;
+  beforeJson: string | null;
+  afterJson: string | null;
+  createdAt: string;
+}
+
+export interface SiteSnapshotItem {
+  id: string;
+  label: string | null;
+  userEmail: string | null;
+  createdAt: string;
+}
+
+export async function getChangelog() {
+  return apiFetch<ChangeLogItem[]>("/api/admin/changelog");
+}
+
+export async function getSnapshots() {
+  return apiFetch<SiteSnapshotItem[]>("/api/admin/snapshots");
+}
+
+export async function createSnapshot(label?: string) {
+  return apiFetch("/api/admin/snapshots", {
+    method: "POST",
+    body: JSON.stringify({ label }),
+  });
+}
+
+export async function restoreChangelog(id: string) {
+  return apiFetch(`/api/admin/changelog/${id}/restore`, { method: "POST" });
+}
+
+export async function restoreSnapshot(id: string) {
+  return apiFetch(`/api/admin/snapshots/${id}/restore`, { method: "POST" });
+}
+
 export async function uploadFile(file: File): Promise<{ url: string }> {
   const formData = new FormData();
   formData.append("file", file);
@@ -317,4 +403,161 @@ export async function uploadFile(file: File): Promise<{ url: string }> {
 
   if (!res.ok) throw new Error("Upload failed");
   return res.json();
+}
+
+export interface BillingTariff {
+  id: string;
+  name: string;
+  tagline: string;
+  cpuLabel: string;
+  ramLabel: string;
+  storageLabel: string;
+  extrasLabel: string;
+  dailyRateRub: number;
+  sortOrder: number;
+  isActive: boolean;
+  monthlyEstimateRub: number;
+}
+
+export interface BillingStatus {
+  balanceRub: number;
+  dailyRateRub: number;
+  selectedDailyRateRub?: number;
+  rateChangePending?: boolean;
+  daysRemaining: number;
+  isSiteEnabled: boolean;
+  manualSiteEnabled: boolean;
+  paidUntil: string | null;
+  monthlyEstimateRub: number;
+  minTopupRub: number;
+  lowBalanceWarning: boolean;
+  tariffId?: string | null;
+  tariff?: BillingTariff | null;
+  tariffs?: BillingTariff[];
+  yookassaConfigured?: boolean;
+  yoomoneyConfigured?: boolean;
+  paymentConfigured?: boolean;
+}
+
+export interface BillingLedgerItem {
+  id: string;
+  type: "PAYMENT" | "DAILY_CHARGE" | "MANUAL_ADJUSTMENT";
+  amountRub: number;
+  balanceAfter: number;
+  description: string;
+  createdAt: string;
+  userEmail: string | null;
+}
+
+export interface BillingPaymentItem {
+  id: string;
+  amountRub: number;
+  status: "PENDING" | "SUCCEEDED" | "CANCELED" | "FAILED";
+  createdAt: string;
+  paidAt: string | null;
+  createdByEmail: string | null;
+}
+
+export async function getBillingStatus() {
+  return apiFetch<BillingStatus>("/api/admin/billing/status");
+}
+
+export async function getBillingHistory() {
+  return apiFetch<{
+    ledger: BillingLedgerItem[];
+    payments: BillingPaymentItem[];
+  }>("/api/admin/billing/history");
+}
+
+export async function createBillingPayment(amountRub: number) {
+  return apiFetch<{ paymentId: string; confirmationUrl: string }>(
+    "/api/admin/billing/create-payment",
+    {
+      method: "POST",
+      body: JSON.stringify({ amountRub }),
+    }
+  );
+}
+
+export async function syncBillingPayment(id: string) {
+  return apiFetch<BillingStatus>(`/api/admin/billing/sync-payment/${id}`, {
+    method: "POST",
+  });
+}
+
+export async function manualBillingAdjust(amountRub: number, description: string) {
+  return apiFetch<BillingStatus>("/api/admin/billing/manual-adjust", {
+    method: "POST",
+    body: JSON.stringify({ amountRub, description }),
+  });
+}
+
+export async function updateBillingSettings(data: {
+  manualSiteEnabled?: boolean;
+}) {
+  return apiFetch<BillingStatus>("/api/admin/billing/settings", {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function removeBillingLedgerEntries(ids: string[]) {
+  return apiFetch<{ removed: number }>("/api/admin/billing/ledger/remove", {
+    method: "POST",
+    body: JSON.stringify({ ids }),
+  });
+}
+
+export async function getBillingTariffs() {
+  return apiFetch<{ tariffs: BillingTariff[] }>("/api/admin/billing/tariffs");
+}
+
+export async function selectBillingTariff(tariffId: string) {
+  return apiFetch<BillingStatus>("/api/admin/billing/tariff/select", {
+    method: "POST",
+    body: JSON.stringify({ tariffId }),
+  });
+}
+
+export async function createBillingTariff(data: {
+  name: string;
+  tagline?: string;
+  cpuLabel: string;
+  ramLabel: string;
+  storageLabel: string;
+  extrasLabel?: string;
+  dailyRateRub: number;
+  sortOrder?: number;
+  isActive?: boolean;
+}) {
+  return apiFetch<BillingTariff>("/api/admin/billing/tariffs", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateBillingTariff(
+  id: string,
+  data: Partial<{
+    name: string;
+    tagline: string;
+    cpuLabel: string;
+    ramLabel: string;
+    storageLabel: string;
+    extrasLabel: string;
+    dailyRateRub: number;
+    sortOrder: number;
+    isActive: boolean;
+  }>
+) {
+  return apiFetch<BillingTariff>(`/api/admin/billing/tariffs/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteBillingTariff(id: string) {
+  return apiFetch<{ success: boolean }>(`/api/admin/billing/tariffs/${id}`, {
+    method: "DELETE",
+  });
 }

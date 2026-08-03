@@ -18,15 +18,13 @@ export interface SiteSettings {
   seoDescription: string | null;
   yandexMetrikaId: string | null;
   whyUsJson: string | null;
+  contentJson: string | null;
+  privacyContent: string | null;
   address: string | null;
   workZone: string;
 }
 
-export interface WhyUsItem {
-  title: string;
-  description: string;
-  icon: string;
-}
+export type { SiteContent, WhyUsItem, NavItem } from "@swarka/shared";
 
 export interface Service {
   id: string;
@@ -61,5 +59,5 @@ export interface Review {
 export interface SiteData {
   settings: SiteSettings;
   reviews: Review[];
-  whyUs: WhyUsItem[];
+  whyUs: import("@swarka/shared").WhyUsItem[];
 }
